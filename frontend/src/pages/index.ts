@@ -1,0 +1,10 @@
+export { LandingPage } from "./LandingPage";
+export { AuthPage } from "./AuthPage";
+export { DashboardPage } from "./DashboardPage";
+export { PlansPage } from "./PlansPage";
+export { ClassesPage } from "./ClassesPage";
+export { ClassDetailPage } from "./ClassDetailPage";
+export { BookingConfirmationPage } from "./BookingConfirmationPage";
+export { FriendsPage } from "./FriendsPage";
+export { FeedPage } from "./FeedPage";
+export { ProfilePage } from "./ProfilePage";
