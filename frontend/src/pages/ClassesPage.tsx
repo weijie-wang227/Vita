@@ -11,8 +11,9 @@ export function ClassesPage() {
 
   useEffect(() => {
     async function loadClasses() {
-      if (currentUser?.id) {
+      if (currentUser) {
         const classesData = await fetchClasses();
+        console.log(currentUser);
         setClasses(classesData);
       } else {
         const classesData = await fetchAllClasses();

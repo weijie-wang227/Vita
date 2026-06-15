@@ -27,7 +27,7 @@ export async function registerUser(data: {
           "https://pub-9934b5033d7946dfafc6a2032d8db9d2.r2.dev/posts/blank-profile-picture-973460_640.png",
         currentPlan: response.data.user.currentPlan,
         creditsRemaining: response.data.user.creditsRemaining,
-        friendIds: response.data.user.friendIds,
+        friendIds: [],
       },
     }
   } catch (error) {

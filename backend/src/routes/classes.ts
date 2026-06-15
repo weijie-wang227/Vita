@@ -9,7 +9,7 @@ const classRouter = Router()
 classRouter.get('/all', async (req: AuthRequest, res) => {
   try {
     const classes = await Class.find().sort({ date: 1, time: 1 })
-    return classes
+    return res.status(200).json(classes)
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to fetch classes' })
