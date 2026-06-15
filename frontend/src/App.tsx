@@ -10,7 +10,6 @@ import {
 import { AppStateProvider } from "./state/provider";
 import { useAppState } from "./state/context";
 import {
-  LandingPage,
   AuthPage,
   DashboardPage,
   PlansPage,
@@ -25,12 +24,12 @@ import { Button, NavLink } from "./components/ui";
 import { ProtectedRoute } from "./pages/ProtectedRoutes";
 
 const navItems = [
-  { label: "Home", to: "/dashboard", icon: Home },
-  { label: "Classes", to: "/classes", icon: LayoutGrid },
-  { label: "Plan", to: "/plans", icon: Sparkles },
-  { label: "Feed", to: "/feed", icon: HeartHandshake },
-  { label: "Friends", to: "/friends", icon: Users },
-  { label: "Profile", to: "/profile", icon: ShieldCheck },
+  { label: "Home", to: "/dashboard", icon: Home, needlogin: true },
+  { label: "Classes", to: "/classes", icon: LayoutGrid, needlogin: false },
+  { label: "Plan", to: "/plans", icon: Sparkles, needlogin: true },
+  { label: "Feed", to: "/feed", icon: HeartHandshake, needlogin: true },
+  { label: "Friends", to: "/friends", icon: Users, needlogin: true },
+  { label: "Profile", to: "/profile", icon: ShieldCheck, needlogin: true },
 ];
 
 function AppRoutes() {
@@ -52,12 +51,18 @@ function AppRoutes() {
             </div>
           </div>
           <nav className="flex flex-wrap items-center gap-4">
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} className="hover:text-white">
-                <item.icon size={18} className="inline-block mr-2" />
-                {item.label}
-              </NavLink>
-            ))}
+            {navItems
+              .filter((item) => currentUser || !item.needlogin)
+              .map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="hover:text-white"
+                >
+                  <item.icon size={18} className="inline-block mr-2" />
+                  {item.label}
+                </NavLink>
+              ))}
             {currentUser ? (
               <Button variant="secondary" onClick={logout}>
                 Sign out
@@ -73,14 +78,15 @@ function AppRoutes() {
 
       <main>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<ClassesPage />} />
           <Route path="/auth" element={<AuthPage />} />
+
+          <Route path="/classes" element={<ClassesPage />} />
+          <Route path="/classes/:id" element={<ClassDetailPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/plans" element={<PlansPage />} />
-            <Route path="/classes" element={<ClassesPage />} />
-            <Route path="/classes/:id" element={<ClassDetailPage />} />
             <Route
               path="/booking-confirmation"
               element={<BookingConfirmationPage />}
