@@ -6,6 +6,16 @@ import { authenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser, buildClassInfo } from '../services/helper'
 
 const classRouter = Router()
+classRouter.get('/all', async (req: AuthRequest, res) => {
+  try {
+    const classes = await Class.find().sort({ date: 1, time: 1 })
+    return classes
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to fetch classes' })
+  }
+})
+
 
 // GET /api/classes
 classRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
