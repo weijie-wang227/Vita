@@ -3,7 +3,7 @@ import { Badge, Button, Card, PageHeading } from "../components/ui";
 import { formatClassDate } from "./helpers";
 import type { ClassInfo } from "../lib/types";
 import { useEffect, useState } from "react";
-import { fetchClasses } from "../api/classes";
+import { fetchClasses, fetchAllClasses } from "../api/classes";
 
 export function ClassesPage() {
   const { currentUser } = useAppState();
@@ -13,6 +13,9 @@ export function ClassesPage() {
     async function loadClasses() {
       if (currentUser?.id) {
         const classesData = await fetchClasses();
+        setClasses(classesData);
+      } else {
+        const classesData = await fetchAllClasses();
         setClasses(classesData);
       }
     }
