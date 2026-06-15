@@ -16,6 +16,7 @@ export function ClassesPage() {
         setClasses(classesData);
       } else {
         const classesData = await fetchAllClasses();
+        console.log(classesData);
         setClasses(classesData);
       }
     }
