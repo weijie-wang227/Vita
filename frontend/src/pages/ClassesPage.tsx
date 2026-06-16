@@ -1,5 +1,5 @@
 import { useAppState } from "../state";
-import { Badge, PageHeading } from "../components/ui";
+import { Badge } from "../components/ui";
 import type { ClassInfo } from "../lib/types";
 import { useEffect, useState } from "react";
 import { fetchClasses } from "../api/classes";
