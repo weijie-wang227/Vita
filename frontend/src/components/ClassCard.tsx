@@ -15,13 +15,15 @@ export function ClassCard({ classItem }: ClassCardProps) {
       href={`/classes/${classItem._id}`}
       className="group block focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-4"
     >
-      <Card className="relative h-80 overflow-hidden rounded-[1.75rem] p-0 transition duration-300 group-hover:shadow-xl">
+      <Card
+        noPadding
+        className="relative h-80 overflow-hidden rounded-[1.75rem] border-0 transition duration-300 group-hover:shadow-xl"
+      >
         <img
           src={classItem.imageUrl}
           alt={classItem.title}
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
-
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
 
