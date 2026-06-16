@@ -85,7 +85,7 @@ export function DashboardPage() {
             <div className="mt-6 grid gap-4">
               {classes.slice(0, 3).map((item) => (
                 <div
-                  key={item.id}
+                  key={item._id}
                   className="rounded-3xl border border-slate-200/80 bg-slate-50 p-5"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -124,7 +124,7 @@ export function DashboardPage() {
               <Button
                 variant="secondary"
                 as="a"
-                href={`/classes/${trending.id}`}
+                href={`/classes/${trending._id}`}
               >
                 View class
               </Button>
@@ -143,7 +143,7 @@ export function DashboardPage() {
               {bookings.slice(-3).map((booking) => {
                 return (
                   <div
-                    key={booking.id}
+                    key={booking._id}
                     className="flex items-center justify-between rounded-3xl bg-slate-50 p-4"
                   >
                     <div>

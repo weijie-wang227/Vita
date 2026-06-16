@@ -200,7 +200,7 @@ export function FeedPage() {
                 <Button
                   variant="secondary"
                   as="a"
-                  href={`/classes/${post.class.id}`}
+                  href={`/classes/${post.class._id}`}
                 >
                   View class
                 </Button>
