@@ -24,11 +24,13 @@ export function ClassDetailPage() {
   }, [currentUser?.id, id]);
 
   const handleBookClass = async () => {
-    if (classInfo?.id) {
-      const success = await bookClass(classInfo.id);
+    if (classInfo?._id && currentUser) {
+      const success = await bookClass(classInfo._id);
       if (success) {
         navigate("/booking-confirmation");
       }
+    } else {
+      navigate("/auth");
     }
   };
 
@@ -90,7 +92,7 @@ export function ClassDetailPage() {
                 </p>
                 <p className="mt-1 text-slate-900">
                   {classInfo
-                    ? Math.max(classInfo.capacity - classInfo.bookedCount, 0)
+                    ? Math.max(classInfo.capacity - classInfo.registered, 0)
                     : null}
                 </p>
               </div>
@@ -103,12 +105,12 @@ export function ClassDetailPage() {
                   Friends going
                 </p>
                 <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {classInfo?.friendsGoing.length
+                  {classInfo?.friendsGoing?.length
                     ? classInfo.friendsGoing.map((item) => item.name).join(", ")
                     : "None of your friends have signed up for this class yet."}
                 </p>
               </div>
-              <Badge>{classInfo?.friendsGoing.length || 0} friends</Badge>
+              <Badge>{classInfo?.friendsGoing?.length || 0} friends</Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Button
@@ -118,7 +120,7 @@ export function ClassDetailPage() {
                   classInfo.bookedByMe ||
                   (currentUser?.creditsRemaining ?? 0) <
                     classInfo?.requiredCredits ||
-                  classInfo.capacity - classInfo.bookedCount <= 0
+                  classInfo.capacity - classInfo.registered <= 0
                 }
               >
                 {classInfo?.bookedByMe ? "Already booked" : "Confirm booking"}
@@ -158,20 +160,11 @@ export function ClassDetailPage() {
                 <span>Free capacity</span>
                 <span>
                   {classInfo
-                    ? Math.max(classInfo.capacity - classInfo.bookedCount, 0)
+                    ? Math.max(classInfo.capacity - classInfo.registered, 0)
                     : null}
                 </span>
               </div>
             </div>
-          </Card>
-          <Card className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.3em] text-indigo-500">
-              Class mood
-            </p>
-            <p className="text-base leading-7 text-slate-600">
-              This class is designed to help you stay consistent, connect with
-              friends, and feel energized after every session.
-            </p>
           </Card>
         </aside>
       </div>

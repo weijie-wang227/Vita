@@ -32,10 +32,6 @@ export async function buildClassInfo(
     userId: { $in: relevantUserIds },
   }).populate('userId', 'name bio avatarUrl')
 
-  const bookedCount = await Signups.countDocuments({
-    classId,
-  })
-
   let bookedByMe = false
   const friendsGoing: unknown[] = []
 
@@ -54,8 +50,6 @@ export async function buildClassInfo(
   return {
     ...classItem.toObject(),
     id: classId,
-    bookedCount,
-    availableSlots: classItem.capacity - bookedCount,
     bookedByMe,
     friendsGoing,
   }

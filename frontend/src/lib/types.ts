@@ -7,7 +7,7 @@ export type MembershipPlan = {
 }
 
 export type ClassItem = {
-  id: string
+  _id: string
   title: string
   description: string
   imageUrl: string
@@ -16,7 +16,7 @@ export type ClassItem = {
   instructor: string
   requiredCredits: number
   capacity: number
-  bookedCount: number
+  registered: number
 }
 
 export type ClassInfo = ClassItem & {

@@ -1,72 +1,65 @@
 import { Router } from 'express'
 import { Class, type IClass } from '../models/Class'
 import { Signups } from '../models/Signups'
-import { Friends } from '../models/Friends'
-import { authenticateToken, type AuthRequest } from '../middleware/auth'
+import { authenticateToken, optionalAuthenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser, buildClassInfo } from '../services/helper'
 
 const classRouter = Router()
-classRouter.get('/all', async (req: AuthRequest, res) => {
-  try {
-    const classes = await Class.find().sort({ date: 1, time: 1 })
-    return res.status(200).json(classes)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to fetch classes' })
-  }
-})
-
 
 // GET /api/classes
-classRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
+classRouter.get("/", optionalAuthenticateToken, async (req: AuthRequest, res) => {
   try {
-    const userId = req.userId
+    const userId = req.userId;
 
+    const classes = await Class.find().sort({ date: 1, time: 1 });
+
+    // Guest user: return normal class data only
     if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' })
+      return res.status(200).json(classes);
     }
 
-    const classes = await Class.find().sort({ date: 1, time: 1 })
-
-    const friendIds = await getFriendIdsForUser(userId)
+    // Logged-in user: return classes with user context
+    const friendIds = await getFriendIdsForUser(userId);
 
     const classesWithUserContext = await Promise.all(
       classes.map((classItem) => buildClassInfo(classItem, userId, friendIds)),
-    )
+    );
 
-    res.json(classesWithUserContext)
+    return res.status(200).json(classesWithUserContext);
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to fetch classes' })
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch classes" });
   }
-})
+});
 
 // GET /api/classes/:id
-classRouter.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+classRouter.get("/:id", optionalAuthenticateToken, async (req: AuthRequest, res) => {
   try {
-    const userId = req.userId
-    const classId = req.params.id
+    const userId = req.userId;
+    const classId = req.params.id;
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' })
-    }
-
-    const classItem = await Class.findById(classId)
+    const classItem = await Class.findById(classId);
 
     if (!classItem) {
-      return res.status(404).json({ error: 'Class not found' })
+      return res.status(404).json({ error: "Class not found" });
     }
 
-    const friendIds = await getFriendIdsForUser(userId)
+    // Guest user: return class without personalised info
+    if (!userId) {
+      return res.status(200).json(classItem);
+    }
 
-    const classInfo = await buildClassInfo(classItem, userId, friendIds)
+    // Logged-in user: return class with personalised info
+    const friendIds = await getFriendIdsForUser(userId);
 
-    res.json(classInfo)
+    const classInfo = await buildClassInfo(classItem, userId, friendIds);
+
+    return res.status(200).json(classInfo);
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to fetch class' })
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch class" });
   }
-})
+});
 
 // POST /api/classes/:id/book
 classRouter.post('/:id/book', authenticateToken, async (req: AuthRequest, res) => {
@@ -76,6 +69,10 @@ classRouter.post('/:id/book', authenticateToken, async (req: AuthRequest, res) =
 
     if (!userId) {
       return res.status(401).json({ error: 'Not authenticated' })
+    }
+
+    if (!classId || Array.isArray(classId)) {
+      return res.status(400).json({ error: 'Invalid class ID' })
     }
 
     const classItem = await Class.findById(classId)
@@ -93,21 +90,17 @@ classRouter.post('/:id/book', authenticateToken, async (req: AuthRequest, res) =
       return res.status(409).json({ error: 'You have already booked this class' })
     }
 
-    const bookedCount = await Signups.countDocuments({
-      classId,
-    })
-
-    if (bookedCount >= classItem.capacity) {
+    if (classItem.registered >= classItem.capacity) {
       return res.status(400).json({ error: 'Class is full' })
-    }
-
-    if (!classId || Array.isArray(classId)) {
-      return res.status(400).json({ error: "Invalid class ID" })
     }
 
     const signup = await Signups.create({
       userId,
       classId,
+    })
+
+    await Class.findByIdAndUpdate(classId, {
+      $inc: { registered: 1 },
     })
 
     res.status(201).json(signup)
@@ -127,6 +120,10 @@ classRouter.delete('/:id/cancel', authenticateToken, async (req: AuthRequest, re
       return res.status(401).json({ error: 'Not authenticated' })
     }
 
+    if (!classId || Array.isArray(classId)) {
+      return res.status(400).json({ error: 'Invalid class ID' })
+    }
+
     const signup = await Signups.findOneAndDelete({
       userId,
       classId,
@@ -135,6 +132,10 @@ classRouter.delete('/:id/cancel', authenticateToken, async (req: AuthRequest, re
     if (!signup) {
       return res.status(404).json({ error: 'Signup not found' })
     }
+
+    await Class.findByIdAndUpdate(classId, {
+      $inc: { registered: -1 },
+    })
 
     res.json({ message: 'Class booking cancelled successfully' })
   } catch (error) {

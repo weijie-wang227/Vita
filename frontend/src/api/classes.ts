@@ -1,15 +1,6 @@
 import type { ClassInfo } from '../lib/types'
 import { api, fallback } from './index'
 
-export async function fetchAllClasses() : Promise<ClassInfo[]> {
-  try {
-    const response = await api.get<ClassInfo[]>('/classes/all')
-    return response.data
-  } catch {
-    return fallback([])
-  }
-}
-
 export async function fetchClasses(): Promise<ClassInfo[]> {
   try {
     const response = await api.get<ClassInfo[]>('/classes')
