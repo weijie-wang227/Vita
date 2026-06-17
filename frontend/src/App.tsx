@@ -46,7 +46,7 @@ function AppRoutes() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl">
-        <div className="mx-auto flex items-center justify-between gap-4 px-6 py-4 lg:px-10">
+        <div className="mx-auto flex items-center justify-between gap-4 px-6 py-2 lg:px-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
