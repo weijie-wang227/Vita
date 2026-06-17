@@ -80,7 +80,7 @@ function AppRoutes() {
         <aside
           className={`fixed left-0 top-0 z-40 h-full w-48 bg-slate-950 border-r border-slate-800/80 transform transition-transform duration-300 ease-in-out pt-24 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } lg:relative lg:translate-x-0 lg:border-r lg:border-slate-800/80`}
+          } lg:static lg:translate-x-0 lg:w-48 lg:border-r lg:border-slate-800/80`}
         >
           <nav className="space-y-2 px-4">
             {visibleNavItems.map((item) => (
