@@ -39,12 +39,10 @@ export function ClassDetailPage() {
       <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
           <div className="space-y-3">
-            <PageHeader>
-              {classInfo?.title}
-            </PageHeader>
-            <p className="text-lg leading-8 text-slate-600">
-              {classInfo?.description}
-            </p>
+            <PageHeading
+              title={{classInfo?.title}}
+              subtitle={classInfo?.description}
+            />
           </div>
           <img
             src={classInfo?.imageUrl}
