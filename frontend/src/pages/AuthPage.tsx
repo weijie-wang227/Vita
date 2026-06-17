@@ -43,7 +43,7 @@ export function AuthPage() {
       <div className="grid gap-10 lg:grid-cols-[480px_auto] lg:items-center">
         <div className="space-y-6">
           <Badge>Member access</Badge>
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-300 sm:text-5xl">
             Log in or join and start booking your next wellness class.
           </h1>
           <p className="max-w-xl text-base leading-7 text-slate-600">

@@ -62,12 +62,23 @@ function AppRoutes() {
               <p className="text-sm text-slate-200">Wellness club</p>
             </div>
           </div>
+          <div>
+            {currentUser ? (
+              <Button variant="secondary" onClick={logout}>
+                Sign out
+              </Button>
+            ) : (
+              <Button variant="secondary" as="a" href="/auth">
+                Sign in
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
       <div className="flex flex-1">
         <aside
-          className={`fixed left-0 top-0 z-40 h-full w-64 bg-slate-950 border-r border-slate-800/80 transform transition-transform duration-300 ease-in-out pt-24 ${
+          className={`fixed left-0 top-0 z-40 h-full w-48 bg-slate-950 border-r border-slate-800/80 transform transition-transform duration-300 ease-in-out pt-24 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           } lg:relative lg:translate-x-0 lg:border-r lg:border-slate-800/80`}
         >
@@ -83,30 +94,6 @@ function AppRoutes() {
                 <span className="text-sm font-medium">{item.label}</span>
               </RouterLink>
             ))}
-            <div className="border-t border-slate-800 pt-4 mt-4">
-              {currentUser ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    logout();
-                    setSidebarOpen(false);
-                  }}
-                  className="w-full justify-center"
-                >
-                  Sign out
-                </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  as="a"
-                  href="/auth"
-                  onClick={() => setSidebarOpen(false)}
-                  className="w-full justify-center"
-                >
-                  Sign in
-                </Button>
-              )}
-            </div>
           </nav>
         </aside>
 
