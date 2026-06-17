@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppState } from "../state";
-import { Badge, Button, Card } from "../components/ui";
+import { Badge, Button, Card, PageHeading } from "../components/ui";
 import { CalendarDays } from "lucide-react";
 import { formatClassDate } from "./helpers";
 import type { ClassInfo } from "../lib/types";
@@ -40,7 +40,7 @@ export function ClassDetailPage() {
         <div className="space-y-6">
           <div className="space-y-3">
             <PageHeading
-              title={{classInfo?.title}}
+              title={classInfo?.title ?? ""}
               subtitle={classInfo?.description}
             />
           </div>
