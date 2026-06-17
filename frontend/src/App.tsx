@@ -23,7 +23,7 @@ import {
   FeedPage,
   ProfilePage,
 } from "./pages";
-import { Button, NavLink } from "./components/ui";
+import { Button } from "./components/ui";
 import { ProtectedRoute } from "./pages/ProtectedRoutes";
 
 const navItems = [
@@ -46,7 +46,7 @@ function AppRoutes() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl">
-        <div className="mx-auto flex items-center justify-between gap-4 px-6 py-2 lg:px-10">
+        <div className="mx-auto flex items-center justify-between gap-4 px-6 py-4 lg:px-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -80,7 +80,7 @@ function AppRoutes() {
         <aside
           className={`fixed left-0 top-0 z-40 h-full w-48 bg-slate-950 border-r border-slate-800/80 transform transition-transform duration-300 ease-in-out pt-24 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          } lg:relative lg:translate-x-0 lg:border-r lg:border-slate-800/80`}
         >
           <nav className="space-y-2 px-4">
             {visibleNavItems.map((item) => (
