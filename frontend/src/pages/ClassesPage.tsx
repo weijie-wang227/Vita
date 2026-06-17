@@ -24,10 +24,6 @@ export function ClassesPage() {
 
   return (
     <div className="container mx-auto px-6 py-10 lg:px-10">
-      <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-center gap-3">
-        </div>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {classes.map((classItem) => (
