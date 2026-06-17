@@ -92,7 +92,7 @@ export function FeedPage() {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Great calligraphy session today"
-                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-400"
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
 
@@ -105,7 +105,7 @@ export function FeedPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Share what you enjoyed..."
                 rows={4}
-                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-400"
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
 
@@ -130,7 +130,7 @@ export function FeedPage() {
                 value={classId}
                 onChange={(event) => setClassId(event.target.value)}
                 placeholder="Optional class ID"
-                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-400"
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
 

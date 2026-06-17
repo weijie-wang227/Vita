@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppState } from "../state";
-import { Badge, Button, Card } from "../components/ui";
+import { Badge, Button, Card, PageHeading } from "../components/ui";
 import { CalendarDays } from "lucide-react";
 import { formatClassDate } from "./helpers";
 import type { ClassInfo } from "../lib/types";
@@ -39,13 +39,10 @@ export function ClassDetailPage() {
       <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
           <div className="space-y-3">
-            <Badge>Class details</Badge>
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
-              {classInfo?.title}
-            </h1>
-            <p className="text-lg leading-8 text-slate-600">
-              {classInfo?.description}
-            </p>
+            <PageHeading
+              title={classInfo?.title ?? ""}
+              subtitle={classInfo?.description}
+            />
           </div>
           <img
             src={classInfo?.imageUrl}
