@@ -39,10 +39,9 @@ export function ClassDetailPage() {
       <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
           <div className="space-y-3">
-            <Badge>Class details</Badge>
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
+            <PageHeader>
               {classInfo?.title}
-            </h1>
+            </PageHeader>
             <p className="text-lg leading-8 text-slate-600">
               {classInfo?.description}
             </p>
