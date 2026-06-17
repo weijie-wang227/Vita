@@ -99,7 +99,7 @@ function AppRoutes() {
 
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/50 hidden lg:block"
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
