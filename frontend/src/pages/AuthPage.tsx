@@ -26,13 +26,13 @@ export function AuthPage() {
         if (success) return navigate(from, { replace: true });
         setError("Unable to find an account with those credentials.");
       } else {
-        const success = await signup({
+        const result = await signup({
           name: form.name,
           email: form.email,
           password: form.password,
         });
-        if (success) return navigate(from, { replace: true });
-        setError("Email is already in use. Please choose a different address.");
+        if (result.isSuccessful) return navigate(from, { replace: true });
+        setError(result.message);
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

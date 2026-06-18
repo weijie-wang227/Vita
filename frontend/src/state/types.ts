@@ -8,7 +8,7 @@ export type AppState = {
   currentPlan: MembershipPlan | null;
   isAuthLoading: boolean
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (data: { name: string; email: string; password: string }) => Promise<boolean>;
+  signup: (data: { name: string; email: string; password: string }) => Promise<{isSuccessful: boolean, message: string}>;
   logout: () => void;
   subscribePlan:(newPlan: MembershipPlan) => void;
   updateUser: (user: User) => void;

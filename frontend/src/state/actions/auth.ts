@@ -19,14 +19,18 @@ export function createAuthActions(_: StateValues, setters: StateSetters) {
     name: string;
     email: string;
     password: string;
-  }): Promise<boolean> => {
+  }): Promise<{isSuccessful: boolean, message: string}> => {
     const result = await registerUser(data);
-    if (!result) return false;
+
+    if (!result.success) {
+      return {isSuccessful: false, message: result.message};
+    }
 
     setCurrentUser(result.user);
     setCurrentUserId(result.user.id);
     localStorage.setItem("vita-current-user", JSON.stringify(result.user));
-    return true;
+
+    return {isSuccessful: true, message:"Account created successfully!"};
   };
 
   const logout = () => {
