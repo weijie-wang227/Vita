@@ -107,7 +107,8 @@ authRouter.post('/login', async (req: Request<{}, {}, LoginBody>, res: Response)
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
-        currentPlan: user.membershipPlanId
+        currentPlan: user.membershipPlanId,
+        creditsRemaining: user.credits
       }
     })
   } catch (error) {

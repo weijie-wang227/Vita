@@ -30,8 +30,9 @@ export function ClassDetailPage() {
       setShowLoginPrompt(true);
       return;
     }
+    console.log(currentUser);
 
-    if (classInfo?._id && currentUser.creditsRemaining >= classInfo.price) {
+    if (classInfo && currentUser.creditsRemaining >= classInfo.price) {
       const success = await bookClass(classInfo._id);
 
       if (success) {
