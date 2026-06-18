@@ -23,7 +23,11 @@ export function DashboardPage() {
         setBookings(classesData.filter((classData) => classData.bookedByMe));
         setTrending(
           classesData.reduce((best, item) =>
-            best.friendsGoing.length > item.friendsGoing.length ? best : item,
+            best.friendsGoing
+              ? best.friendsGoing.length > item.friendsGoing.length
+                ? best
+                : item
+              : best,
           ),
         );
       }
@@ -112,8 +116,8 @@ export function DashboardPage() {
                     Friends going
                   </p>
                   <h2 className="text-xl font-semibold text-slate-900">
-                    {trending.friendsGoing.length} friend
-                    {trending.friendsGoing.length === 1 ? "" : "s"} are going
+                    {trending.friendsGoing?.length ?? 0} friend
+                    {trending.friendsGoing?.length === 1 ? "" : "s"} are going
                   </h2>
                 </div>
                 <Badge>Discover</Badge>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "../state";
 import { Badge, Button, Card, Input } from "../components/ui";
+import { useLocation } from "react-router-dom";
 
 export function AuthPage() {
   const { login, signup } = useAppState();
@@ -10,6 +11,9 @@ export function AuthPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const location = useLocation();
+
+  const from = location.state?.from || "/";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -19,7 +23,7 @@ export function AuthPage() {
     try {
       if (mode === "login") {
         const success = await login(form.email, form.password);
-        if (success) return navigate("/dashboard");
+        if (success) return navigate(from, { replace: true });
         setError("Unable to find an account with those credentials.");
       } else {
         const success = await signup({
@@ -27,7 +31,7 @@ export function AuthPage() {
           email: form.email,
           password: form.password,
         });
-        if (success) return navigate("/dashboard");
+        if (success) return navigate(from, { replace: true });
         setError("Email is already in use. Please choose a different address.");
       }
     } catch (err) {

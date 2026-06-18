@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppState } from "../state";
 import { Badge, Button, Card, PageHeading } from "../components/ui";
 import { CalendarDays } from "lucide-react";
@@ -13,6 +13,8 @@ export function ClassDetailPage() {
   const { currentUser } = useAppState();
   const navigate = useNavigate();
   const [classInfo, setClass] = useState<ClassInfo | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     async function loadClass() {
@@ -24,14 +26,25 @@ export function ClassDetailPage() {
   }, [currentUser?.id, id]);
 
   const handleBookClass = async () => {
-    if (classInfo?._id && currentUser) {
+    if (!currentUser) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (classInfo?._id && currentUser.creditsRemaining >= classInfo.price) {
       const success = await bookClass(classInfo._id);
+
       if (success) {
         navigate("/booking-confirmation");
       }
-    } else {
-      navigate("/auth");
     }
+  };
+  const handleGoToLogin = () => {
+    navigate("/auth", {
+      state: {
+        from: location.pathname + location.search,
+      },
+    });
   };
 
   return (
@@ -115,11 +128,21 @@ export function ClassDetailPage() {
                 disabled={
                   !classInfo ||
                   classInfo.bookedByMe ||
-                  (currentUser?.creditsRemaining ?? 0) < classInfo?.price ||
+                  (currentUser &&
+                    currentUser.creditsRemaining < classInfo.price) ||
                   classInfo.capacity - classInfo.registered <= 0
                 }
               >
-                {classInfo?.bookedByMe ? "Already booked" : "Confirm booking"}
+                {classInfo
+                  ? classInfo?.bookedByMe
+                    ? "Already booked"
+                    : currentUser &&
+                        currentUser.creditsRemaining < classInfo.price
+                      ? "Not enough credits"
+                      : classInfo?.capacity - classInfo?.registered <= 0
+                        ? "Fully booked"
+                        : "Confirm booking"
+                  : "Not available"}
               </Button>
               <Button variant="secondary" as="a" href="/classes">
                 Back to discovery
@@ -164,6 +187,31 @@ export function ClassDetailPage() {
           </Card>
         </aside>
       </div>
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-6">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-semibold text-slate-900">
+              Sign in to book this class
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              You need to sign in before booking. After signing in, you will be
+              brought back to this class page.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <Button onClick={handleGoToLogin}>Sign in</Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => setShowLoginPrompt(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
