@@ -1,5 +1,7 @@
-export function formatClassDate(dateString: string) {
-  return new Date(dateString).toLocaleString([], {
+export function formatClassDate(dateString: string, timeString: string) {
+  const date = new Date(`${dateString} ${timeString}`);
+
+  return date.toLocaleString([], {
     weekday: "short",
     month: "short",
     day: "numeric",

@@ -193,7 +193,7 @@ export function FeedPage() {
                     {post.class.title}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {formatClassDate(post.class.dateTime ?? "")}
+                    {formatClassDate(post.class.date ?? "")}
                   </p>
                 </div>
 

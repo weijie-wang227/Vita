@@ -94,10 +94,11 @@ export function DashboardPage() {
                         {item.title}
                       </p>
                       <p className="text-sm text-slate-600">
-                        {formatClassDate(item.dateTime)} · {item.location}
+                        {formatClassDate(item.date, item.time)} ·{" "}
+                        {item.location}
                       </p>
                     </div>
-                    <Badge>{item.requiredCredits} credits</Badge>
+                    <Badge>{item.price} credits</Badge>
                   </div>
                 </div>
               ))}
@@ -152,7 +153,7 @@ export function DashboardPage() {
                       </p>
                       <p className="text-sm text-slate-600">
                         {booking
-                          ? formatClassDate(booking.dateTime)
+                          ? formatClassDate(booking.date, booking.time)
                           : "Pending"}
                       </p>
                     </div>

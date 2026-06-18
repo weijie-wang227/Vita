@@ -64,7 +64,9 @@ export function ClassDetailPage() {
                   Date & time
                 </p>
                 <p className="mt-1 text-slate-900">
-                  {classInfo ? formatClassDate(classInfo?.dateTime) : null}
+                  {classInfo
+                    ? formatClassDate(classInfo?.date, classInfo?.time)
+                    : null}
                 </p>
               </div>
               <div>
@@ -79,9 +81,7 @@ export function ClassDetailPage() {
                 <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
                   Credits required
                 </p>
-                <p className="mt-1 text-slate-900">
-                  {classInfo?.requiredCredits}
-                </p>
+                <p className="mt-1 text-slate-900">{classInfo?.price}</p>
               </div>
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
@@ -115,8 +115,7 @@ export function ClassDetailPage() {
                 disabled={
                   !classInfo ||
                   classInfo.bookedByMe ||
-                  (currentUser?.creditsRemaining ?? 0) <
-                    classInfo?.requiredCredits ||
+                  (currentUser?.creditsRemaining ?? 0) < classInfo?.price ||
                   classInfo.capacity - classInfo.registered <= 0
                 }
               >
@@ -151,7 +150,7 @@ export function ClassDetailPage() {
             <div className="grid gap-3 rounded-3xl bg-slate-50 p-4">
               <div className="flex items-center justify-between text-slate-600">
                 <span>Required credits</span>
-                <span>{classInfo?.requiredCredits}</span>
+                <span>{classInfo?.price}</span>
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span>Free capacity</span>

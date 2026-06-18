@@ -11,10 +11,11 @@ export type ClassItem = {
   title: string
   description: string
   imageUrl: string
-  dateTime: string
+  date: string
+  time: string
   location: string
   instructor: string
-  requiredCredits: number
+  price: number
   capacity: number
   registered: number
 }

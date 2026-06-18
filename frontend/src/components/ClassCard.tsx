@@ -29,7 +29,7 @@ export function ClassCard({ classItem }: ClassCardProps) {
 
         {/* Top right badge */}
         <div className="absolute right-4 top-4">
-          <Badge>{classItem.requiredCredits} credits</Badge>
+          <Badge>{classItem.price} credits</Badge>
         </div>
 
         {/* Bottom left details */}
@@ -45,7 +45,7 @@ export function ClassCard({ classItem }: ClassCardProps) {
           </div>
 
           <div className="flex flex-wrap gap-3 text-sm text-white/80">
-            <span>{formatClassDate(classItem.dateTime)}</span>
+            <span>{formatClassDate(classItem?.date, classItem?.time)}</span>
             <span>{isFull ? "Full" : `${spotsLeft} spots left`}</span>
 
             {classItem.friendsGoing?.length > 0 && (
