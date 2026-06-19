@@ -98,7 +98,7 @@ export function ClassDetailPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">
             Vita wellness
           </p>
-          <h1 className="-ml-px mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          <h1 className="-ml-px mt-2 text-3xl font-bold tracking-tight text-slate-700 sm:text-4xl">
             {classInfo?.title ?? ""}
           </h1>
           {classInfo?.description ? (
