@@ -92,7 +92,7 @@ export function ClassDetailPage() {
       </div>
 
       {/* Below image content */}
-      <div className="container mx-auto px-6 py-8 lg:px-10">
+      <div className="container mx-auto px-6 py-0 lg:px-10">
         {/* Title section */}
         <div className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">
