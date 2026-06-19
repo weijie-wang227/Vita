@@ -58,7 +58,7 @@ export function ClassDetailPage() {
           className="h-full w-full object-cover"
         />
         {/* Gradient fade overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
         {/* Overlay content - just quick details */}
         <div className="absolute bottom-0 left-0 right-0 px-6 py-8 sm:px-10">
