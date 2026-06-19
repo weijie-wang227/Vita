@@ -41,7 +41,7 @@ export function Card({
   return (
     <div
       className={`rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl ${
-        noPadding ? "p-0" : "p-6"
+        noPadding ? "p-0" : "px-6 py-5"
       } ${className}`}
       {...props}
     />

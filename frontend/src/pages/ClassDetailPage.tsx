@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppState } from "../state";
-import { Badge, Button, Card, PageHeading } from "../components/ui";
+import { Badge, Button, Card } from "../components/ui";
 import { CalendarDays } from "lucide-react";
 import { formatClassDate } from "./helpers";
 import type { ClassInfo } from "../lib/types";
@@ -49,144 +49,171 @@ export function ClassDetailPage() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-10 lg:px-10">
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <PageHeading
-              title={classInfo?.title ?? ""}
-              subtitle={classInfo?.description}
-            />
-          </div>
-          <img
-            src={classInfo?.imageUrl}
-            alt={classInfo?.title}
-            className="w-full rounded-[2rem] object-cover"
-          />
-          <Card className="grid gap-6">
-            <div className="grid gap-2">
-              <p className="text-sm uppercase tracking-[0.3em] text-indigo-500">
+    <div className="flex flex-col">
+      {/* Full-width hero image with overlay */}
+      <div className="relative h-80 w-full overflow-hidden sm:h-96">
+        <img
+          src={classInfo?.imageUrl}
+          alt={classInfo?.title}
+          className="h-full w-full object-cover"
+        />
+        {/* Gradient fade overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+
+        {/* Overlay content - just quick details */}
+        <div className="absolute bottom-0 left-0 right-0 px-6 py-8 sm:px-10">
+          <div className="flex flex-wrap gap-4 sm:gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
                 Instructor
               </p>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="mt-1 font-semibold text-white">
                 {classInfo?.instructor}
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Location
+              </p>
+              <p className="mt-1 font-semibold text-white">
+                {classInfo?.location}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Credits
+              </p>
+              <p className="mt-1 font-semibold text-white">
+                {classInfo?.price}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Below image content */}
+      <div className="container mx-auto px-6 py-0 lg:px-10">
+        {/* Title section */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">
+            Vita wellness
+          </p>
+          <h1 className="-ml-px mt-2 text-3xl font-bold tracking-tight text-slate-700 sm:text-4xl">
+            {classInfo?.title ?? ""}
+          </h1>
+          {classInfo?.description ? (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+              {classInfo.description}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+          <div className="space-y-4">
+            <Card className="grid gap-4">
+              <div className="grid gap-2">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                   Date & time
                 </p>
-                <p className="mt-1 text-slate-900">
+                <p className="text-sm font-semibold text-slate-900">
                   {classInfo
                     ? formatClassDate(classInfo?.date, classInfo?.time)
                     : null}
                 </p>
               </div>
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
-                  Location
-                </p>
-                <p className="mt-1 text-slate-900">{classInfo?.location}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                    Capacity
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {classInfo
+                      ? Math.max(classInfo.capacity - classInfo.registered, 0)
+                      : null}{" "}
+                    spots left
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
-                  Credits required
-                </p>
-                <p className="mt-1 text-slate-900">{classInfo?.price}</p>
+            </Card>
+            <Card className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-indigo-500">
+                    Friends going
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {classInfo?.friendsGoing?.length
+                      ? classInfo.friendsGoing.map((item) => item.name).join(", ")
+                      : "None yet"}
+                  </p>
+                </div>
+                <Badge>{classInfo?.friendsGoing?.length || 0}</Badge>
               </div>
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
-                  Remaining slots
-                </p>
-                <p className="mt-1 text-slate-900">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  onClick={handleBookClass}
+                  disabled={
+                    !classInfo ||
+                    classInfo.bookedByMe ||
+                    (currentUser &&
+                      currentUser.creditsRemaining < classInfo.price) ||
+                    classInfo.capacity - classInfo.registered <= 0
+                  }
+                >
                   {classInfo
-                    ? Math.max(classInfo.capacity - classInfo.registered, 0)
-                    : null}
-                </p>
+                    ? classInfo?.bookedByMe
+                      ? "Already booked"
+                      : currentUser &&
+                          currentUser.creditsRemaining < classInfo.price
+                        ? "Not enough credits"
+                        : classInfo?.capacity - classInfo?.registered <= 0
+                          ? "Fully booked"
+                          : "Confirm booking"
+                    : "Not available"}
+                </Button>
+                <Button variant="secondary" as="a" href="/classes">
+                  Back
+                </Button>
               </div>
-            </div>
-          </Card>
-          <Card className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-indigo-500">
-                  Friends going
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {classInfo?.friendsGoing?.length
-                    ? classInfo.friendsGoing.map((item) => item.name).join(", ")
-                    : "None of your friends have signed up for this class yet."}
-                </p>
+              <p className="text-xs leading-5 text-slate-600">
+                {classInfo?.bookedByMe
+                  ? "You are signed up for this class."
+                  : "Book now if you have enough credits."}
+              </p>
+            </Card>
+          </div>
+          <aside className="space-y-4">
+            <Card className="space-y-3">
+              <div className="flex items-center gap-2 text-slate-900">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600">
+                  <CalendarDays size={18} />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-indigo-500">
+                    Balance
+                  </p>
+                  <p className="mt-0.5 text-lg font-semibold">
+                    {currentUser?.creditsRemaining ?? 0}
+                  </p>
+                </div>
               </div>
-              <Badge>{classInfo?.friendsGoing?.length || 0} friends</Badge>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button
-                onClick={handleBookClass}
-                disabled={
-                  !classInfo ||
-                  classInfo.bookedByMe ||
-                  (currentUser &&
-                    currentUser.creditsRemaining < classInfo.price) ||
-                  classInfo.capacity - classInfo.registered <= 0
-                }
-              >
-                {classInfo
-                  ? classInfo?.bookedByMe
-                    ? "Already booked"
-                    : currentUser &&
-                        currentUser.creditsRemaining < classInfo.price
-                      ? "Not enough credits"
-                      : classInfo?.capacity - classInfo?.registered <= 0
-                        ? "Fully booked"
-                        : "Confirm booking"
-                  : "Not available"}
-              </Button>
-              <Button variant="secondary" as="a" href="/classes">
-                Back to discovery
-              </Button>
-            </div>
-            <p className="text-sm leading-6 text-slate-600">
-              {classInfo?.bookedByMe
-                ? "You are already signed up for this class."
-                : "Book now if you have enough credits and spots are still available."}
-            </p>
-          </Card>
+              <div className="grid gap-2 rounded-2xl bg-slate-50 p-3">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Required</span>
+                  <span>{classInfo?.price}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Available</span>
+                  <span>
+                    {classInfo
+                      ? Math.max(classInfo.capacity - classInfo.registered, 0)
+                      : null}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </aside>
         </div>
-        <aside className="space-y-6">
-          <Card className="space-y-4">
-            <div className="flex items-center gap-3 text-slate-900">
-              <div className="grid h-12 w-12 place-items-center rounded-3xl bg-indigo-500/10 text-indigo-600">
-                <CalendarDays />
-              </div>
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-indigo-500">
-                  Your current balance
-                </p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {currentUser?.creditsRemaining ?? 0} credits
-                </p>
-              </div>
-            </div>
-            <div className="grid gap-3 rounded-3xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Required credits</span>
-                <span>{classInfo?.price}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Free capacity</span>
-                <span>
-                  {classInfo
-                    ? Math.max(classInfo.capacity - classInfo.registered, 0)
-                    : null}
-                </span>
-              </div>
-            </div>
-          </Card>
-        </aside>
       </div>
       {showLoginPrompt && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-6">
