@@ -52,3 +52,10 @@ export type Post = {
   imageUrl: string
   createdAt: string
 }
+
+export type ChatMessage = {
+  id: string;
+  userName: string;
+  message: string;
+  createdAt: string;
+};

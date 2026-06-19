@@ -1,37 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Card } from "./ui";
-import type { ClassInfo, User } from "../lib/types";
+import type { ClassInfo, User, ChatMessage } from "../lib/types";
+import { fetchChat, postMessage } from "../api/chat";
 
 type ClassChatProps = {
   classInfo: ClassInfo | null;
   currentUser: User | null;
 };
 
-type ChatMessage = {
-  id: string;
-  userName: string;
-  message: string;
-  createdAt: string;
-};
-
 export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
   const [message, setMessage] = useState("");
 
   // Temporary mock messages
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      userName: "Alicia",
-      message: "Looking forward to this class!",
-      createdAt: "10:30 AM",
-    },
-    {
-      id: "2",
-      userName: "David",
-      message: "Does anyone know if we need to bring anything?",
-      createdAt: "10:42 AM",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    async function loadChat() {
+      const messageData = await fetchChat(classInfo?._id ?? "");
+      console.log(messageData);
+      setMessages(messageData);
+    }
+    loadChat();
+  }, []);
 
   if (!classInfo) {
     return (
@@ -64,24 +54,24 @@ export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
     );
   }
 
-  const handleSendMessage = () => {
+  async function handleSendMessage() {
     const trimmedMessage = message.trim();
 
     if (!trimmedMessage) return;
-
+    const response = postMessage(classInfo?._id ?? "", trimmedMessage);
+    const newMsg = await response;
+    console.log(newMsg);
+    if (!newMsg) return;
     const newMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      userName: currentUser.name,
-      message: trimmedMessage,
-      createdAt: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      id: newMsg.id,
+      userName: newMsg.userName,
+      message: newMsg.message,
+      createdAt: newMsg.createdAt,
     };
 
     setMessages((prev) => [...prev, newMessage]);
     setMessage("");
-  };
+  }
 
   return (
     <Card className="flex min-h-[520px] flex-col space-y-4">
@@ -126,7 +116,10 @@ export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
                       isMine ? "text-indigo-100" : "text-slate-400"
                     }`}
                   >
-                    {item.createdAt}
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
 

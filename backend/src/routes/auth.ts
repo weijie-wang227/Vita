@@ -3,7 +3,6 @@ import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { User } from '../models/User'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 interface RegisterBody {
   email: string
@@ -18,6 +17,7 @@ interface LoginBody {
 
 import { Router } from 'express'
 import { authenticateToken, AuthRequest } from '../middleware/auth'
+import { getJwtSecret } from '../services/helper'
 const authRouter = Router()
 
 // Register
@@ -53,7 +53,7 @@ authRouter.post('/register', async (req: Request<{}, {}, RegisterBody>, res: Res
     await user.save()
 
     // Generate token
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id, email: user.email }, getJwtSecret(), {
       expiresIn: '7d',
     })
 
@@ -95,7 +95,7 @@ authRouter.post('/login', async (req: Request<{}, {}, LoginBody>, res: Response)
     }
 
     // Generate token
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id, email: user.email }, getJwtSecret(), {
       expiresIn: '7d',
     })
 

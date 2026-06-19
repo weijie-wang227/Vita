@@ -1,8 +1,9 @@
 import { Router } from 'express'
-import { Class, type IClass } from '../models/Class'
+import { Class } from '../models/Class'
 import { Signups } from '../models/Signups'
 import { authenticateToken, optionalAuthenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser, buildClassInfo } from '../services/helper'
+import { Chat } from '../models/Chat'
 
 const classRouter = Router()
 
@@ -143,5 +144,100 @@ classRouter.delete('/:id/cancel', authenticateToken, async (req: AuthRequest, re
     res.status(500).json({ error: 'Failed to cancel class booking' })
   }
 })
+
+classRouter.post("/:id/message", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId;
+    const classId = req.params.id;
+    const { message } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const classInfo = await Class.findById(classId);
+
+    if (!classInfo) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const signup = await Signups.findOne({
+      userId,
+      classId,
+    });
+
+    if (!signup) {
+      return res.status(403).json({
+        error: "Only registered members can send messages",
+      });
+    }
+
+    const newChat = await Chat.create({
+      userId,
+      classId: classInfo._id,
+      message: message.trim(),
+    });
+
+    const populatedChat = await newChat.populate("userId", "name");
+
+    return res.status(201).json({
+      id: populatedChat._id.toString(),
+      userName: (populatedChat.userId as any)?.name ?? "Unknown user",
+      message: populatedChat.message,
+      createdAt: populatedChat.createdAt.toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to send chat message" });
+  }
+});
+
+classRouter.get("/:id/chat", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId;
+    const classId = req.params.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const classInfo = await Class.findById(classId);
+
+    if (!classInfo) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const signup = await Signups.findOne({
+      userId,
+      classId,
+    });
+
+    if (!signup) {
+      return res.status(403).json({
+        error: "Only registered members can view this chat",
+      });
+    }
+
+    const messages = await Chat.find({ classId })
+      .populate("userId", "name")
+      .sort({ createdAt: 1 });
+
+    const formattedMessages = messages.map((chat: any) => ({
+      id: chat._id.toString(),
+      userName: chat.userId?.name ?? "Unknown user",
+      message: chat.message,
+      createdAt: chat.createdAt.toISOString(),
+    }));
+
+    return res.status(200).json(formattedMessages);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch chat messages" });
+  }
+});
 
 export default classRouter

@@ -1,8 +1,8 @@
 // middleware/authenticateToken.ts
 import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../services/helper'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
 export interface AuthRequest extends Request {
   userId?: string
@@ -22,7 +22,7 @@ export function authenticateToken(
       return res.status(401).json({ error: 'Access token required' })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
       userId: string
       email: string
     }
@@ -51,7 +51,7 @@ export function optionalAuthenticateToken(
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
       userId: string;
     };
 
@@ -59,6 +59,7 @@ export function optionalAuthenticateToken(
     return next();
   } catch (error) {
     // Invalid token can either be treated as guest...
+    console.log(error)
     return next();
 
     // Or, stricter version:
