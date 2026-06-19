@@ -60,49 +60,32 @@ export function ClassDetailPage() {
         {/* Gradient fade overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
 
-        {/* Overlay content */}
+        {/* Overlay content - just quick details */}
         <div className="absolute bottom-0 left-0 right-0 px-6 py-8 sm:px-10">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-4 sm:gap-6">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-indigo-400">
-                Vita wellness
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Instructor
               </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                {classInfo?.title ?? ""}
-              </h1>
-              {classInfo?.description ? (
-                <p className="mt-2 max-w-2xl text-sm leading-5 text-slate-200">
-                  {classInfo.description}
-                </p>
-              ) : null}
+              <p className="mt-1 font-semibold text-white">
+                {classInfo?.instructor}
+              </p>
             </div>
-
-            {/* Quick details overlay */}
-            <div className="flex flex-wrap gap-4 sm:gap-6">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Instructor
-                </p>
-                <p className="mt-1 font-semibold text-white">
-                  {classInfo?.instructor}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Location
-                </p>
-                <p className="mt-1 font-semibold text-white">
-                  {classInfo?.location}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Credits
-                </p>
-                <p className="mt-1 font-semibold text-white">
-                  {classInfo?.price}
-                </p>
-              </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Location
+              </p>
+              <p className="mt-1 font-semibold text-white">
+                {classInfo?.location}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Credits
+              </p>
+              <p className="mt-1 font-semibold text-white">
+                {classInfo?.price}
+              </p>
             </div>
           </div>
         </div>
@@ -110,6 +93,21 @@ export function ClassDetailPage() {
 
       {/* Below image content */}
       <div className="container mx-auto px-6 py-8 lg:px-10">
+        {/* Title section */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">
+            Vita wellness
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            {classInfo?.title ?? ""}
+          </h1>
+          {classInfo?.description ? (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+              {classInfo.description}
+            </p>
+          ) : null}
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-4">
             <Card className="grid gap-4">
