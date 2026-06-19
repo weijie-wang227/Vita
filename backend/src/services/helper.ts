@@ -5,9 +5,7 @@ import { User } from "../models/User"
 
 // Helper functions
 export async function getFriendIdsForUser(userId: string): Promise<string[]> {
-  const friendships = await Friends.find({
-    $or: [{ userId }, { friendId: userId }],
-  })
+  const friendships = await Friends.find({userId})
 
   return friendships.map((friendship) => {
     const friendshipUserId = friendship.userId.toString()

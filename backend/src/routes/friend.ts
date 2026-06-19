@@ -17,6 +17,7 @@ friendRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 })
 
+// When friend is added, it is added bi-directionally
 friendRouter.post('/add/:friendId', authenticateToken, async (req: AuthRequest, res) => {
     try {
         const userId = req.userId
@@ -38,6 +39,7 @@ friendRouter.post('/add/:friendId', authenticateToken, async (req: AuthRequest, 
         }
 
         await Friends.create({ userId: userId, friendId: friendId })
+        await Friends.create({ userId: friendId, friendId: userId })
         res.json(friendUser)
     } catch (error) {
         res.status(500).json({ error: 'Failed to add friend' })
