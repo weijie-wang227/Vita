@@ -79,7 +79,7 @@ export function AuthPage() {
             <p className="text-sm uppercase tracking-[0.3em] text-indigo-300">
               {mode === "login" ? "Sign in" : "Create account"}
             </p>
-            <h2 className="text-2xl font-semibold">
+            <h2 className="text-2xl font-semibold" style={{ color: "rgba(0, 20, 150, 1)" }}>
               {mode === "login" ? "Welcome back" : "Join Vita today"}
             </h2>
           </div>
