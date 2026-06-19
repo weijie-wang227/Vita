@@ -18,6 +18,7 @@ export function FeedPage() {
   useEffect(() => {
     const loadPosts = async () => {
       const postData = await fetchPosts();
+      console.log(postData);
       setPosts(postData);
     };
 
@@ -153,16 +154,16 @@ export function FeedPage() {
 
       <div className="grid gap-6">
         {posts.map((post: Post) => (
-          <Card key={post.id} className="space-y-4">
+          <Card key={post._id} className="space-y-4">
             <div className="flex items-center gap-4">
               <img
-                src={post.user?.avatarUrl}
-                alt={post.user?.name}
+                src={post.userId?.avatarUrl}
+                alt={post.userId?.name}
                 className="h-14 w-14 rounded-3xl object-cover"
               />
               <div>
                 <p className="font-semibold text-slate-900">
-                  {post.user?.name}
+                  {post.userId?.name}
                 </p>
                 <p className="text-sm text-slate-500">Shared a class post</p>
               </div>

@@ -45,12 +45,12 @@ export type Booking = {
 
 export type Post = {
   title: string
-  id: string
-  user: User
+  _id: string
+  userId: User
   class: ClassItem
   description: string
   imageUrl: string
-  createdAt: string
+  updatedAt: string
 }
 
 export type ChatMessage = {
