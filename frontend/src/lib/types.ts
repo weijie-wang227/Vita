@@ -52,11 +52,3 @@ export type Post = {
   imageUrl: string
   createdAt: string
 }
-
-export type AnalyticsSummary = {
-  totalUsers: number
-  totalBookings: number
-  popularClasses: Array<{ title: string; bookings: number }>
-  planDistribution: Array<{ plan: string; count: number }>
-  creditUsage: Array<{ month: string; creditsUsed: number }>
-}
