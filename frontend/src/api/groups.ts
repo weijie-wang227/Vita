@@ -10,7 +10,7 @@ export async function fetchGroups(): Promise<GroupInfo[]> {
   }
 }
 
-export async function fetchGroupById(groupId: string) {
+export async function fetchGroupById(groupId: string): Promise<GroupInfo> {
   try {
     const response = await api.get<GroupInfo>(`/groups/${groupId}`)
     return response.data
@@ -19,7 +19,7 @@ export async function fetchGroupById(groupId: string) {
   }
 }
 
-export async function createGroup(data: {title: string, imageUrl: string, description: string}) {
+export async function createGroup(data: {title: string, imageUrl: string, description: string}): Promise<GroupInfo> {
   try {
     const response = await api.post<GroupInfo>('/groups/create', data)
     return response.data

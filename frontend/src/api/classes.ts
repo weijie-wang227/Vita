@@ -10,7 +10,7 @@ export async function fetchClasses(): Promise<ClassInfo[]> {
   }
 }
 
-export async function fetchClassById(classId: string) {
+export async function fetchClassById(classId: string): Promise<ClassInfo> {
   try {
     const response = await api.get<ClassInfo>(`/classes/${classId}`)
     return response.data

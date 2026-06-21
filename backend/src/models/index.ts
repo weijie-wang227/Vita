@@ -1,3 +1,5 @@
+import { Activity } from "./Activity";
+
 export { Chat } from "./Chat";
 export { Class, IClass } from "./Class";
 export { Post, Comment } from "./Feed"
@@ -8,3 +10,4 @@ export { Joins } from "./Joins";
 export { Plan, IPlan } from "./Plan";
 export { Signups } from "./Signups";
 export { User, IUser } from "./User";
+export { Activity } from "./Activity"

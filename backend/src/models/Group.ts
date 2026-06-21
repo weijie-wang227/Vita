@@ -13,7 +13,7 @@ const groupSchema = new Schema<IGroup>(
     title: { type: String, required: true},
     admin: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
     description: { type: String, required: true},
-    joined: { type: Number, required: true, default: 1},
+    joined: { type: Number, required: true, default: 0},
     imageUrl: { type: String, required: true},
   },
   { timestamps: true }

@@ -1,7 +1,7 @@
 import { useAppState } from "../state";
 import type { GroupInfo } from "../lib/types";
 import { useEffect, useState } from "react";
-import { fetchGroups, createGroup } from "../api/groups";
+import { fetchGroups, createGroup, joinGroup } from "../api/groups";
 import { GroupCard } from "../components/GroupCard";
 import { PageHeading } from "../components/ui";
 import { uploadImageToR2 } from "../api/uploads";
@@ -50,6 +50,8 @@ export function GroupsPage() {
         description: description.trim(),
         imageUrl: uploadedImageUrl ?? "",
       });
+
+      await joinGroup(newGroup._id);
 
       setGroups((currentGroups) => [newGroup, ...currentGroups]);
 

@@ -16,9 +16,10 @@ export async function postGroupMessage(
 ): Promise<ChatMessage> {
   try {
     const response = await api.post<ChatMessage>(
-      `/groupes/${groupId}/message`,
+      `/groups/${groupId}/message`,
       { message }
     );
+    console.log(response)
 
     return response.data;
   } catch {

@@ -18,8 +18,8 @@ export function GroupDetailPage() {
 
   useEffect(() => {
     async function loadGroup() {
-      const classData = await fetchGroupById(id ?? "");
-      setGroup(classData);
+      const groupData = await fetchGroupById(id ?? "");
+      setGroup(groupData);
     }
 
     loadGroup();
@@ -149,9 +149,7 @@ export function GroupDetailPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button
                       onClick={handleJoinGroup}
-                      disabled={
-                        !groupInfo || groupInfo.joinedByMe || currentUser
-                      }
+                      disabled={!groupInfo || groupInfo.joinedByMe}
                     >
                       {groupInfo
                         ? groupInfo?.joinedByMe
@@ -159,7 +157,7 @@ export function GroupDetailPage() {
                           : "Confirm joining"
                         : "Not available"}
                     </Button>
-                    <Button variant="secondary" as="a" href="/classes">
+                    <Button variant="secondary" as="a" href="/groups">
                       Back
                     </Button>
                   </div>

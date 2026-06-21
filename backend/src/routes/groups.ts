@@ -4,7 +4,6 @@ import { Joins } from '../models/Joins'
 import { GroupChat } from '../models/GroupChat'
 import { authenticateToken, optionalAuthenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser, buildGroupInfo } from '../services/helper'
-import { Chat } from '../models/Chat'
 import { isValidId } from '../services/helper'
 
 const groupRouter = Router()
@@ -263,9 +262,11 @@ groupRouter.get("/:id/chat", authenticateToken, async (req: AuthRequest, res) =>
       });
     }
 
-    const messages = await Chat.find({ groupId })
+    const messages = await GroupChat.find({ groupId })
       .populate("userId", "name")
       .sort({ createdAt: 1 });
+      
+    console.log(messages)
 
     const formattedMessages = messages.map((chat: any) => ({
       id: chat._id.toString(),
