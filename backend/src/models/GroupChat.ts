@@ -1,12 +1,12 @@
 import mongoose, { Schema } from 'mongoose'
 
-const chatSchema = new Schema(
+const groupChatSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
-    classId: { type: Schema.Types.ObjectId, required: true, ref: 'Class' },
+    groupId: { type: Schema.Types.ObjectId, required: true, ref: 'Group' },
     message: { type: String, required: true}
   },
     { timestamps: true }
 )
 
-export const Chat = mongoose.model('Chat', chatSchema)
+export const GroupChat = mongoose.model('GroupChat', groupChatSchema)

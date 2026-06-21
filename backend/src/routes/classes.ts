@@ -1,9 +1,7 @@
 import { Router } from 'express'
-import { Class } from '../models/Class'
-import { Signups } from '../models/Signups'
 import { authenticateToken, optionalAuthenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser, buildClassInfo } from '../services/helper'
-import { Chat } from '../models/Chat'
+import { Chat, Class, Signups } from '../models'
 
 const classRouter = Router()
 

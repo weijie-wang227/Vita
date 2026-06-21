@@ -1,14 +1,10 @@
-import mongoose from 'mongoose'
 import { Router } from 'express'
-import { Post, Comment } from '../models/Feed'
+import { Post, Comment } from '../models'
 import { authenticateToken, type AuthRequest } from '../middleware/auth'
 import { getFriendIdsForUser } from '../services/helper'
+import { isValidId } from '../services/helper'
 
 const feedRouter = Router()
-
-function isValidId(id: string) {
-  return mongoose.Types.ObjectId.isValid(id)
-}
 
 // GET /api/feed
 // Get posts from current user + friends

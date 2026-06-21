@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import path from "path";
 import { Router } from "express";
 import { authenticateToken, type AuthRequest } from "../middleware/auth";
 import { createUploadUrl } from "../lib/r2";

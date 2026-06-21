@@ -97,9 +97,6 @@ export function PageHeading({
 }) {
   return (
     <div className="mb-6">
-      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-indigo-500">
-        Vita wellness
-      </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-300 sm:text-4xl">
         {title}
       </h1>

@@ -1,18 +1,18 @@
 import { Card } from "./ui";
-import type { ClassInfo, User } from "../lib/types";
-import { fetchClassChat, postClassMessage } from "../api/classChat";
+import type { GroupInfo, User } from "../lib/types";
+import { fetchGroupChat, postGroupMessage } from "../api/groupChat";
 import { Chat } from "./Chat";
 
-type ClassChatProps = {
-  classInfo: ClassInfo | null;
+type GroupChatProps = {
+  groupInfo: GroupInfo | null;
   currentUser: User | null;
 };
 
-export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
-  if (!classInfo) {
+export function GroupChat({ groupInfo, currentUser }: GroupChatProps) {
+  if (!groupInfo) {
     return (
       <Card>
-        <p className="text-slate-600">Class not found.</p>
+        <p className="text-slate-600">Group not found.</p>
       </Card>
     );
   }
@@ -28,7 +28,7 @@ export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
     );
   }
 
-  if (!classInfo.bookedByMe) {
+  if (!groupInfo.joinedByMe) {
     return (
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Member chat</h2>
@@ -43,10 +43,10 @@ export function ClassChat({ classInfo, currentUser }: ClassChatProps) {
   return (
     <Chat
       currentUser={currentUser}
-      id={classInfo._id}
-      title={classInfo.title}
-      fetchMessages={fetchClassChat}
-      sendMessage={postClassMessage}
+      id={groupInfo._id}
+      title={groupInfo.title}
+      fetchMessages={fetchGroupChat}
+      sendMessage={postGroupMessage}
     />
   );
 }

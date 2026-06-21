@@ -4,6 +4,8 @@ export { DashboardPage } from "./DashboardPage";
 export { PlansPage } from "./PlansPage";
 export { ClassesPage } from "./ClassesPage";
 export { ClassDetailPage } from "./ClassDetailPage";
+export { GroupsPage } from "./GroupsPage";
+export { GroupDetailPage } from "./GroupDetailPage"
 export { BookingConfirmationPage } from "./BookingConfirmationPage";
 export { FriendsPage } from "./FriendsPage";
 export { FeedPage } from "./FeedPage";

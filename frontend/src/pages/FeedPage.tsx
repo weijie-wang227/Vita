@@ -2,7 +2,7 @@ import { Button, Card, PageHeading } from "../components/ui";
 import type { Post } from "../lib/types";
 import { fetchPosts, createPost } from "../api/feed";
 import { useEffect, useState } from "react";
-import { formatClassDate } from "./helpers";
+import { formatDate } from "./helpers";
 import { uploadImageToR2 } from "../api/uploads";
 
 export function FeedPage() {
@@ -194,7 +194,7 @@ export function FeedPage() {
                     {post.class.title}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {formatClassDate(post?.class?.date, post?.class?.time)}
+                    {formatDate(post?.class?.date, post?.class?.time)}
                   </p>
                 </div>
 

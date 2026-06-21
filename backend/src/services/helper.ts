@@ -1,7 +1,9 @@
 import { IClass } from "../models/Class"
 import { Friends } from "../models/Friends"
 import { Signups } from "../models/Signups"
-import { User } from "../models/User"
+import { IGroup } from "../models/Group"
+import { Joins } from "../models/Joins"
+import mongoose from "mongoose"
 
 // Helper functions
 export async function getFriendIdsForUser(userId: string): Promise<string[]> {
@@ -53,6 +55,42 @@ export async function buildClassInfo(
   }
 }
 
+export async function buildGroupInfo(
+  groupItem: IGroup,
+  userId: string,
+  friendIds: string[],
+) {
+  const groupId = groupItem._id.toString()
+  const relevantUserIds = [userId, ...friendIds]
+
+  const joins = await Joins.find({
+    groupId,
+    userId: { $in: relevantUserIds },
+  }).populate('userId', 'name bio avatarUrl')
+
+  let joinedByMe = false
+  const friendsJoined: unknown[] = []
+
+  for (const join of joins) {
+    const populatedUser = join.userId
+
+    const signupUserId = populatedUser._id.toString()
+
+    if (signupUserId === userId) {
+      joinedByMe = true
+    } else {
+      friendsJoined.push(populatedUser)
+    }
+  }
+
+  return {
+    ...groupItem.toObject(),
+    id: groupId,
+    joinedByMe,
+    friendsJoined,
+  }
+}
+
 export function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
@@ -61,4 +99,8 @@ export function getJwtSecret() {
   }
 
   return secret;
+}
+
+export function isValidId(id: string) {
+  return mongoose.Types.ObjectId.isValid(id)
 }

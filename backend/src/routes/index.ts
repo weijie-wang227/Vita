@@ -12,6 +12,7 @@ import classRoutes from './classes'
 import feedRoutes from './feed'
 import uploadRoutes from './uploads'
 import userRoutes from './user'
+import groupRoutes from './groups'
 
 router.use('/auth', authRoutes)
 router.use('/plans', planRoutes)
@@ -20,3 +21,4 @@ router.use('/classes', classRoutes)
 router.use('/feed', feedRoutes)
 router.use('/uploads', uploadRoutes)
 router.use('/user', userRoutes)
+router.use('/groups', groupRoutes)

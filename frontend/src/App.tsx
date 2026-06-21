@@ -9,6 +9,7 @@ import {
   HeartHandshake,
   Menu,
   X,
+  MessageSquareShare,
 } from "lucide-react";
 import { AppStateProvider } from "./state/provider";
 import { useAppState } from "./state/context";
@@ -18,6 +19,8 @@ import {
   PlansPage,
   ClassesPage,
   ClassDetailPage,
+  GroupsPage,
+  GroupDetailPage,
   BookingConfirmationPage,
   FriendsPage,
   FeedPage,
@@ -29,9 +32,10 @@ import { ProtectedRoute } from "./pages/ProtectedRoutes";
 const navItems = [
   { label: "Home", to: "/dashboard", icon: Home, needlogin: true },
   { label: "Classes", to: "/classes", icon: LayoutGrid, needlogin: false },
+  { label: "Groups", to: "/groups", icon: Users, needlogin: false },
   { label: "Plan", to: "/plans", icon: Sparkles, needlogin: true },
-  { label: "Feed", to: "/feed", icon: HeartHandshake, needlogin: true },
-  { label: "Friends", to: "/friends", icon: Users, needlogin: true },
+  { label: "Feed", to: "/feed", icon: MessageSquareShare, needlogin: true },
+  { label: "Friends", to: "/friends", icon: HeartHandshake, needlogin: true },
   { label: "Profile", to: "/profile", icon: ShieldCheck, needlogin: true },
 ];
 
@@ -40,7 +44,7 @@ function AppRoutes() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const visibleNavItems = navItems.filter(
-    (item) => currentUser || !item.needlogin
+    (item) => currentUser || !item.needlogin,
   );
 
   return (
@@ -111,6 +115,9 @@ function AppRoutes() {
 
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/classes/:id" element={<ClassDetailPage />} />
+
+            <Route path="/groups" element={<GroupsPage />} />
+            <Route path="/groups/:id" element={<GroupDetailPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />

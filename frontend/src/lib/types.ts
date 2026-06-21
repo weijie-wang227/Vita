@@ -25,6 +25,20 @@ export type ClassInfo = ClassItem & {
   bookedByMe: boolean;
 }
 
+export type GroupItem = {
+  _id: string,
+  title: string,
+  description: string,
+  imageUrl: string,
+  admin: User,
+  joined: number
+}
+
+export type GroupInfo = GroupItem & {
+  friendsJoined: User[],
+  joinedByMe: boolean;
+}
+
 export type User = {
   id: string
   name: string

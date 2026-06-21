@@ -1,43 +1,40 @@
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppState } from "../state";
 import { Badge, Button, Card } from "../components/ui";
-import { CalendarDays } from "lucide-react";
-import { formatDate } from "./helpers";
-import type { ClassInfo } from "../lib/types";
+import type { GroupInfo } from "../lib/types";
 import { useEffect, useState } from "react";
-import { fetchClassById } from "../api/classes";
-import { bookClass } from "../api/classes";
-import { ClassChat } from "../components/ClassChat";
+import { fetchGroupById } from "../api/groups";
+import { joinGroup } from "../api/groups";
+import { GroupChat } from "../components/GroupChat";
 
-export function ClassDetailPage() {
+export function GroupDetailPage() {
   const { id } = useParams();
   const { currentUser } = useAppState();
   const navigate = useNavigate();
-  const [classInfo, setClass] = useState<ClassInfo | null>(null);
+  const [groupInfo, setGroup] = useState<GroupInfo | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<"details" | "chat">("details");
 
   useEffect(() => {
-    async function loadClass() {
-      const classData = await fetchClassById(id ?? "");
-      setClass(classData);
+    async function loadGroup() {
+      const classData = await fetchGroupById(id ?? "");
+      setGroup(classData);
     }
 
-    loadClass();
+    loadGroup();
   }, [currentUser?.id, id]);
 
-  const handleBookClass = async () => {
+  const handleJoinGroup = async () => {
     if (!currentUser) {
       setShowLoginPrompt(true);
       return;
     }
 
-    if (classInfo && currentUser.creditsRemaining >= classInfo.price) {
-      const success = await bookClass(classInfo._id);
-
+    if (groupInfo) {
+      const success = await joinGroup(groupInfo._id);
       if (success) {
-        navigate("/booking-confirmation");
+        setGroup({ ...groupInfo, joinedByMe: true });
       }
     }
   };
@@ -54,8 +51,8 @@ export function ClassDetailPage() {
       {/* Full-width hero image with overlay */}
       <div className="relative h-80 w-full overflow-hidden sm:h-96">
         <img
-          src={classInfo?.imageUrl}
-          alt={classInfo?.title}
+          src={groupInfo?.imageUrl}
+          alt={groupInfo?.title}
           className="h-full w-full object-cover"
         />
         {/* Gradient fade overlay */}
@@ -66,26 +63,10 @@ export function ClassDetailPage() {
           <div className="flex flex-wrap gap-4 sm:gap-6">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Instructor
+                Admin
               </p>
               <p className="mt-1 font-semibold text-white">
-                {classInfo?.instructor}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Location
-              </p>
-              <p className="mt-1 font-semibold text-white">
-                {classInfo?.location}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Credits
-              </p>
-              <p className="mt-1 font-semibold text-white">
-                {classInfo?.price}
+                {groupInfo?.admin?.name}
               </p>
             </div>
           </div>
@@ -97,7 +78,7 @@ export function ClassDetailPage() {
         {/* Title section */}
         <div className="mb-6">
           <h1 className="-ml-px mt-2 text-3xl font-bold tracking-tight text-slate-400 sm:text-4xl">
-            {classInfo?.title ?? ""}
+            {groupInfo?.title ?? ""}
           </h1>
         </div>
         <div className="flex w-fit rounded-full bg-slate-100 p-1">
@@ -110,7 +91,7 @@ export function ClassDetailPage() {
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Class details
+            Group details
           </button>
 
           <button
@@ -129,38 +110,22 @@ export function ClassDetailPage() {
         {activeTab === "details" ? (
           <>
             <div className="mb-6">
-              {classInfo?.description ? (
+              {groupInfo?.description ? (
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                  {classInfo.description}
+                  {groupInfo.description}
                 </p>
               ) : null}
             </div>
             <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
               <div className="space-y-4">
                 <Card className="grid gap-4">
-                  <div className="grid gap-2">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                      Date & time
-                    </p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {classInfo
-                        ? formatDate(classInfo?.date, classInfo?.time)
-                        : null}
-                    </p>
-                  </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                        Capacity
+                        Members
                       </p>
                       <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {classInfo
-                          ? Math.max(
-                              classInfo.capacity - classInfo.registered,
-                              0,
-                            )
-                          : null}{" "}
-                        spots left
+                        {groupInfo?.joined} members
                       </p>
                     </div>
                   </div>
@@ -172,35 +137,26 @@ export function ClassDetailPage() {
                         Friends going
                       </p>
                       <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {classInfo?.friendsGoing?.length
-                          ? classInfo.friendsGoing
+                        {groupInfo?.friendsJoined?.length
+                          ? groupInfo.friendsJoined
                               .map((item) => item.name)
                               .join(", ")
                           : "None yet"}
                       </p>
                     </div>
-                    <Badge>{classInfo?.friendsGoing?.length || 0}</Badge>
+                    <Badge>{groupInfo?.friendsJoined?.length || 0}</Badge>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button
-                      onClick={handleBookClass}
+                      onClick={handleJoinGroup}
                       disabled={
-                        !classInfo ||
-                        classInfo.bookedByMe ||
-                        (currentUser &&
-                          currentUser.creditsRemaining < classInfo.price) ||
-                        classInfo.capacity - classInfo.registered <= 0
+                        !groupInfo || groupInfo.joinedByMe || currentUser
                       }
                     >
-                      {classInfo
-                        ? classInfo?.bookedByMe
-                          ? "Already booked"
-                          : currentUser &&
-                              currentUser.creditsRemaining < classInfo.price
-                            ? "Not enough credits"
-                            : classInfo?.capacity - classInfo?.registered <= 0
-                              ? "Fully booked"
-                              : "Confirm booking"
+                      {groupInfo
+                        ? groupInfo?.joinedByMe
+                          ? "Already joined"
+                          : "Confirm joining"
                         : "Not available"}
                     </Button>
                     <Button variant="secondary" as="a" href="/classes">
@@ -208,62 +164,28 @@ export function ClassDetailPage() {
                     </Button>
                   </div>
                   <p className="text-xs leading-5 text-slate-600">
-                    {classInfo?.bookedByMe
+                    {groupInfo?.joinedByMe
                       ? "You are signed up for this class."
                       : "Book now if you have enough credits."}
                   </p>
                 </Card>
               </div>
-              <aside className="space-y-4">
-                <Card className="space-y-3">
-                  <div className="flex items-center gap-2 text-slate-900">
-                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600">
-                      <CalendarDays size={18} />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-indigo-500">
-                        Balance
-                      </p>
-                      <p className="mt-0.5 text-lg font-semibold">
-                        {currentUser?.creditsRemaining ?? 0}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid gap-2 rounded-2xl bg-slate-50 p-3">
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Required</span>
-                      <span>{classInfo?.price}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Available</span>
-                      <span>
-                        {classInfo
-                          ? Math.max(
-                              classInfo.capacity - classInfo.registered,
-                              0,
-                            )
-                          : null}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </aside>
             </div>
           </>
         ) : (
-          <ClassChat currentUser={currentUser} classInfo={classInfo} />
+          <GroupChat currentUser={currentUser} groupInfo={groupInfo} />
         )}
 
         {showLoginPrompt && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-6">
             <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-xl">
               <h2 className="text-xl font-semibold text-slate-900">
-                Sign in to book this class
+                Sign in to join this group
               </h2>
 
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                You need to sign in before booking. After signing in, you will
-                be brought back to this class page.
+                You need to sign in before joining. After signing in, you will
+                be brought back to this group page.
               </p>
 
               <div className="mt-6 flex gap-3">

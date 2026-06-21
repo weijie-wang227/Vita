@@ -1,6 +1,5 @@
 import { Router } from 'express'
-import { Friends } from '../models/Friends'
-import { User } from '../models/User'
+import { Friends, User } from '../models'
 import { authenticateToken, AuthRequest } from '../middleware/auth'
 
 const friendRouter = Router()

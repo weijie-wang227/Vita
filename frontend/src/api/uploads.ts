@@ -3,7 +3,7 @@ import { api, fallback } from ".";
 export async function getPresignedUploadUrl(data: {
   fileName: string;
   contentType: string;
-  folder: "profiles" | "classes" | "posts";
+  folder: "profiles" | "classes" | "posts" | "groups";
 }): Promise<{
   uploadUrl: string;
   key: string;
@@ -19,7 +19,7 @@ export async function getPresignedUploadUrl(data: {
 
 export async function uploadImageToR2(
   file: File,
-  folder: "profiles" | "classes" | "posts",
+  folder: "profiles" | "classes" | "posts" | "groups",
 ): Promise<string> {
   const { uploadUrl, publicUrl } = await getPresignedUploadUrl({
     fileName: file.name,

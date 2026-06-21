@@ -1,6 +1,6 @@
 import { useAppState } from "../state";
 import { Badge, Button, Card, PageHeading } from "../components/ui";
-import { formatClassDate } from "./helpers";
+import { formatDate } from "./helpers";
 import { useState, useEffect } from "react";
 import type { ClassInfo, User } from "../lib/types";
 import { fetchClasses } from "../api/classes";
@@ -98,8 +98,7 @@ export function DashboardPage() {
                         {item.title}
                       </p>
                       <p className="text-sm text-slate-600">
-                        {formatClassDate(item.date, item.time)} ·{" "}
-                        {item.location}
+                        {formatDate(item.date, item.time)} · {item.location}
                       </p>
                     </div>
                     <Badge>{item.price} credits</Badge>
@@ -157,7 +156,7 @@ export function DashboardPage() {
                       </p>
                       <p className="text-sm text-slate-600">
                         {booking
-                          ? formatClassDate(booking.date, booking.time)
+                          ? formatDate(booking.date, booking.time)
                           : "Pending"}
                       </p>
                     </div>
@@ -195,9 +194,6 @@ export function DashboardPage() {
                   <div>
                     <p className="font-semibold text-slate-900">
                       {friend.name}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      Friend ID: {friend.id}
                     </p>
                   </div>
                 </div>

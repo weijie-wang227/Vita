@@ -1,5 +1,4 @@
-import { Plan } from '../models/Plan'
-import { User } from '../models/User'
+import { Plan, User } from '../models'
 import { Router } from 'express'
 import { authenticateToken, AuthRequest } from '../middleware/auth'
 
