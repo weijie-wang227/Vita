@@ -1,9 +1,11 @@
 import { api, fallback } from ".";
 
+type FolderTypes = "profiles" | "classes" | "posts" | "groups" | "activities"
+
 export async function getPresignedUploadUrl(data: {
   fileName: string;
   contentType: string;
-  folder: "profiles" | "classes" | "posts" | "groups";
+  folder: FolderTypes;
 }): Promise<{
   uploadUrl: string;
   key: string;
@@ -19,7 +21,7 @@ export async function getPresignedUploadUrl(data: {
 
 export async function uploadImageToR2(
   file: File,
-  folder: "profiles" | "classes" | "posts" | "groups",
+  folder: FolderTypes,
 ): Promise<string> {
   const { uploadUrl, publicUrl } = await getPresignedUploadUrl({
     fileName: file.name,

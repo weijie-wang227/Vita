@@ -5,6 +5,8 @@ import { createUploadUrl } from "../lib/r2";
 
 const uploadRouter = Router();
 
+const safeFolders = ["profiles", "classes", "post", "groups", "activities"]
+
 uploadRouter.post(
   "/presigned-url",
   authenticateToken,
@@ -24,7 +26,7 @@ uploadRouter.post(
       }
 
       const safeFolder =
-        folder === "profiles" || folder === "classes" || folder === "posts"
+        folder in safeFolders
           ? folder
           : "misc";
 

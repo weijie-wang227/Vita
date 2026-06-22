@@ -3,8 +3,7 @@ import type { ClassInfo } from "../lib/types";
 import { useEffect, useState } from "react";
 import { fetchClasses } from "../api/classes";
 import { ClassCard } from "../components/ClassCard";
-import { ActivityMapModal } from "../components/ActivityMap";
-import { FloatingMapButton } from "../components/FloatingMapButton";
+import { ActivityMapModal, FloatingMapButton } from "../components/ActivityMap";
 
 export function ClassesPage() {
   const { currentUser } = useAppState();

@@ -266,7 +266,6 @@ groupRouter.get("/:id/chat", authenticateToken, async (req: AuthRequest, res) =>
       .populate("userId", "name")
       .sort({ createdAt: 1 });
       
-    console.log(messages)
 
     const formattedMessages = messages.map((chat: any) => ({
       id: chat._id.toString(),

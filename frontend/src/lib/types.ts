@@ -74,9 +74,11 @@ export type ChatMessage = {
   createdAt: string;
 };
 
+export type ActivityType = "classes" | "groups";
+
 export type Activity = {
   _id: string;
-  title: "classes" | "groups";
+  title: ActivityType;
   description: string;
   type: string;
   date: string;

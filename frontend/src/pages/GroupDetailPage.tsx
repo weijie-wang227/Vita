@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { fetchGroupById } from "../api/groups";
 import { joinGroup } from "../api/groups";
 import { GroupChat } from "../components/GroupChat";
+import { AddActivityModal } from "../components/AddActivity";
 
 export function GroupDetailPage() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ export function GroupDetailPage() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<"details" | "chat">("details");
+  const [addActivityOpen, setAddActivityOpen] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadGroup() {
@@ -200,6 +202,22 @@ export function GroupDetailPage() {
           </div>
         )}
       </div>
+
+      <div className="floating-map-actions">
+        <button
+          type="button"
+          className="floating-add-button"
+          onClick={() => setAddActivityOpen(true)}
+        >
+          +
+        </button>
+      </div>
+      <AddActivityModal
+        sourceId={id ?? ""}
+        type="groups"
+        open={addActivityOpen}
+        onClose={() => setAddActivityOpen(false)}
+      />
     </div>
   );
 }

@@ -19,7 +19,6 @@ export async function postGroupMessage(
       `/groups/${groupId}/message`,
       { message }
     );
-    console.log(response)
 
     return response.data;
   } catch {

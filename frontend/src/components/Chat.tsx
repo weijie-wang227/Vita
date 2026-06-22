@@ -26,7 +26,6 @@ export function Chat({
     async function loadChat() {
       if (!id) return;
       const messageData = await fetchMessages(id ?? "");
-      console.log(messageData);
       setMessages(messageData);
     }
     loadChat();
@@ -39,7 +38,6 @@ export function Chat({
     if (!id) return;
     const response = sendMessage(id, trimmedMessage);
     const newMsg = await response;
-    console.log(newMsg);
     if (!newMsg) return;
     const newMessage: ChatMessage = {
       id: newMsg.id,

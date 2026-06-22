@@ -18,7 +18,6 @@ export function FeedPage() {
   useEffect(() => {
     const loadPosts = async () => {
       const postData = await fetchPosts();
-      console.log(postData);
       setPosts(postData);
     };
 
@@ -112,7 +111,7 @@ export function FeedPage() {
 
             <div>
               <label className="text-sm font-medium text-slate-700">
-                Image URL
+                Image File
               </label>
               <input
                 type="file"

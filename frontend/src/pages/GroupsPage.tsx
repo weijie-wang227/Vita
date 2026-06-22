@@ -6,6 +6,7 @@ import { GroupCard } from "../components/GroupCard";
 import { PageHeading } from "../components/ui";
 import { uploadImageToR2 } from "../api/uploads";
 import { Button, Card } from "../components/ui";
+import { FloatingMapButton, ActivityMapModal } from "../components/ActivityMap";
 
 export function GroupsPage() {
   const { currentUser } = useAppState();
@@ -16,12 +17,12 @@ export function GroupsPage() {
   const [description, setDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
 
   useEffect(() => {
     async function loadGroups() {
       try {
         const groupsData = await fetchGroups();
-        console.log(groupsData);
         setGroups(groupsData);
       } catch (error) {
         console.error("Failed to load groups:", error);
@@ -150,6 +151,8 @@ export function GroupsPage() {
           <GroupCard key={groupItem._id} groupItem={groupItem} />
         ))}
       </div>
+      <FloatingMapButton onClick={() => setMapOpen(true)} />
+      <ActivityMapModal open={mapOpen} onClose={() => setMapOpen(false)} />
     </div>
   );
 }
