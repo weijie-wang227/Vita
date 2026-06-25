@@ -12,7 +12,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 };
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "6mb" }));
 app.use("/api", router);
 app.use(errorHandler);
 

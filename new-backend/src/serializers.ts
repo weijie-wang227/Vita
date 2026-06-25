@@ -1,17 +1,24 @@
-type ActivityType =
-  | "wellness"
-  | "food"
-  | "photo"
-  | "hiking"
-  | "chess"
-  | "fishing"
-  | "social"
-  | "bike";
+type VitaCategory = "physical" | "social" | "cognitive" | "creative";
 
 type AnyDoc = Record<string, any>;
 
 function asObject(doc: AnyDoc) {
   return typeof doc.toObject === "function" ? doc.toObject() : doc;
+}
+
+function toIsoString(value: unknown) {
+  const date = value instanceof Date ? value : new Date(String(value ?? ""));
+
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
+function formatChatTime(value: unknown) {
+  const date = new Date(toIsoString(value));
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 export function serializeFriend(friendship: AnyDoc) {
@@ -58,9 +65,35 @@ export function serializeChat(chat: AnyDoc) {
     name: item.name,
     members: item.members?.length || 0,
     avatar: item.avatar,
-    lastMessage: item.lastMessage,
-    time: item.time,
-    unread: item.unread,
+    lastMessage: item.lastMessage ?? "",
+    time: item.time ?? "",
+    unread: item.unread ?? 0,
+  };
+}
+
+export function serializeChatMessage(
+  message: AnyDoc,
+  adminUserIds = new Set<string>(),
+) {
+  const item = asObject(message);
+  const chat = asObject(item.chat ?? {});
+  const sender = asObject(item.sender ?? {});
+  const createdAt = toIsoString(item.createdAt ?? item.updatedAt);
+  const senderId = String(sender._id ?? "");
+
+  return {
+    id: String(item._id),
+    groupId: chat.mockId,
+    sender: {
+      id: senderId,
+      name: sender.name ?? "Unknown user",
+      handle: sender.handle ?? "",
+      avatar: sender.avatarUrl ?? "",
+      isAdmin: adminUserIds.has(senderId),
+    },
+    body: item.body,
+    time: formatChatTime(createdAt),
+    createdAt,
   };
 }
 
@@ -83,13 +116,14 @@ export function serializeActivity(activity: AnyDoc, joiningUsers: AnyDoc[] = [])
     id: item.mockId,
     title: item.title,
     host: host?.name ?? item.hostName ?? "Unknown host",
-    type: item.type as ActivityType,
     date: item.date,
     time: item.time,
     location: item.location,
+    durationMinutes: item.durationMinutes,
     spots: item.spots,
     price: item.price,
     rating: item.rating,
+    categories: (item.categories ?? []) as VitaCategory[],
     joiningFriends,
   };
 
@@ -128,16 +162,17 @@ export function serializeMapPin(pin: AnyDoc) {
     longitude: item.longitude,
     x: 0,
     y: 0,
-    type: item.type as ActivityType,
     label: item.label,
     premium: item.premium,
+    categories: (activity.categories ?? []) as VitaCategory[],
   };
 }
 
 export function serializeFeedPost(post: AnyDoc) {
   const item = asObject(post);
   const user = asObject(item.user);
-  const activity = asObject(item.activity);
+  const activity = item.activity ? asObject(item.activity) : null;
+  const group = item.group ? asObject(item.group) : null;
 
   return {
     id: item.mockId,
@@ -146,9 +181,19 @@ export function serializeFeedPost(post: AnyDoc) {
     avatar: user.avatarUrl,
     time: item.time,
     caption: item.caption,
-    image: item.image,
+    image: item.image || undefined,
     likes: item.likes,
     comments: item.comments,
-    activity: activity.title,
+    activity: activity?.title ?? group?.name,
+    durationMinutes: activity?.durationMinutes,
+    categories: (activity?.categories ?? []) as VitaCategory[],
+    group: group
+      ? {
+          id: group.mockId,
+          name: group.name,
+          avatar: group.avatar,
+          members: group.members?.length || 0,
+        }
+      : undefined,
   };
 }

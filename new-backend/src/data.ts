@@ -1,12 +1,4 @@
-export type ActivityType =
-  | "wellness"
-  | "food"
-  | "photo"
-  | "hiking"
-  | "chess"
-  | "fishing"
-  | "social"
-  | "bike";
+export type VitaCategory = "physical" | "social" | "cognitive" | "creative";
 
 export type FriendSeed = {
   id: number;
@@ -21,13 +13,14 @@ type ActivityBase = {
   id: number;
   title: string;
   host: string;
-  type: ActivityType;
   date: string;
   time: string;
   location: string;
+  durationMinutes: number;
   spots: number;
   price: string;
   rating: number;
+  categories: VitaCategory[];
   joiningFriends: FriendSeed[];
 };
 
@@ -134,13 +127,14 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Master Chen Wei",
     cover:
       "https://images.unsplash.com/photo-1548957175-84f0f9af659e?w=400&h=220&fit=crop&auto=format",
-    type: "wellness",
     date: "Sat, Jun 28",
     time: "7:00 AM",
     location: "Fort Canning Park",
+    durationMinutes: 60,
     spots: 6,
-    price: "$18",
+    price: "18 credits",
     rating: 4.9,
+    categories: ["physical", "cognitive"],
     tags: ["Guided", "All levels"],
     joiningFriends: [friends[0], friends[2], friends[6]],
   },
@@ -150,13 +144,14 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Chef Mdm Siti",
     cover:
       "https://images.unsplash.com/photo-1562593028-1fe2d15bde36?w=400&h=220&fit=crop&auto=format",
-    type: "food",
     date: "Sun, Jun 29",
     time: "9:00 AM",
     location: "Chinatown Complex",
+    durationMinutes: 150,
     spots: 4,
-    price: "$35",
+    price: "35 credits",
     rating: 5,
+    categories: ["physical", "social", "creative"],
     tags: ["Tasting included", "Small group"],
     joiningFriends: [friends[4], friends[1]],
   },
@@ -166,13 +161,14 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Raymond Koh",
     cover:
       "https://images.unsplash.com/photo-1501554728187-ce583db33af7?w=400&h=220&fit=crop&auto=format",
-    type: "photo",
     date: "Mon, Jun 30",
     time: "7:30 AM",
     location: "Singapore Botanic Gardens",
+    durationMinutes: 90,
     spots: 8,
-    price: "$25",
+    price: "25 credits",
     rating: 4.8,
+    categories: ["physical", "cognitive", "creative"],
     tags: ["Camera tips", "Print included"],
     joiningFriends: [friends[1], friends[4], friends[0]],
   },
@@ -183,65 +179,70 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 4,
     title: "Morning Walk - East Coast Park",
     host: "David Ng",
-    type: "hiking",
     date: "Sat, Jun 28",
     time: "7:00 AM",
     location: "East Coast Park",
+    durationMinutes: 75,
     spots: 15,
-    price: "Free",
+    price: "0 credits",
     rating: 4.7,
+    categories: ["physical", "social"],
     joiningFriends: [friends[3], friends[7], friends[1]],
   },
   {
     id: 5,
     title: "Senior Chess Club",
     host: "James Ho",
-    type: "chess",
     date: "Fri, Jun 27",
     time: "2:00 PM",
     location: "Bishan Community Club",
+    durationMinutes: 120,
     spots: 12,
-    price: "Free",
+    price: "0 credits",
     rating: 4.6,
+    categories: ["social", "cognitive"],
     joiningFriends: [friends[5], friends[3]],
   },
   {
     id: 6,
     title: "Cantonese Cooking Class",
     host: "Mdm Grace Wong",
-    type: "food",
     date: "Sun, Jun 29",
     time: "10:00 AM",
     location: "Toa Payoh CC Kitchen",
+    durationMinutes: 120,
     spots: 10,
-    price: "$22",
+    price: "22 credits",
     rating: 4.9,
+    categories: ["social", "cognitive", "creative"],
     joiningFriends: [friends[6], friends[2], friends[4]],
   },
   {
     id: 7,
     title: "Kelong Fishing Day Trip",
     host: "Uncle Ravi",
-    type: "fishing",
     date: "Sat, Jun 28",
     time: "6:00 AM",
     location: "Pulau Ubin Jetty",
+    durationMinutes: 360,
     spots: 6,
-    price: "$45",
+    price: "45 credits",
     rating: 4.8,
+    categories: ["physical", "social", "cognitive"],
     joiningFriends: [friends[0], friends[3]],
   },
   {
     id: 8,
     title: "Book Club - Cafe Meeting",
     host: "Linda Tan",
-    type: "social",
     date: "Thu, Jun 26",
     time: "3:30 PM",
     location: "Tiong Bahru Bakery",
+    durationMinutes: 90,
     spots: 10,
-    price: "Free",
+    price: "0 credits",
     rating: 4.7,
+    categories: ["social", "cognitive"],
     joiningFriends: [friends[0], friends[6], friends[2]],
   },
 ];
@@ -253,9 +254,9 @@ export const groupChats = [
     members: 14,
     avatar:
       "https://images.unsplash.com/photo-1548957175-84f0f9af659e?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "Master Chen: Remember to wear comfortable shoes on Saturday",
-    time: "5m",
-    unread: 4,
+    lastMessage: "",
+    time: "",
+    unread: 0,
   },
   {
     id: 2,
@@ -263,9 +264,9 @@ export const groupChats = [
     members: 28,
     avatar:
       "https://images.unsplash.com/photo-1501554728187-ce583db33af7?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "David: Meeting at Car Park C entrance as usual",
-    time: "32m",
-    unread: 2,
+    lastMessage: "",
+    time: "",
+    unread: 0,
   },
   {
     id: 3,
@@ -273,8 +274,8 @@ export const groupChats = [
     members: 11,
     avatar:
       "https://images.unsplash.com/photo-1629185752152-fe65698ddee4?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "Raymond: I shared Monday's photos in the Drive folder!",
-    time: "1h",
+    lastMessage: "",
+    time: "",
     unread: 0,
   },
   {
@@ -283,9 +284,9 @@ export const groupChats = [
     members: 9,
     avatar:
       "https://images.unsplash.com/photo-1659882751335-43e664461e6d?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "Grace: Next week we're doing chicken rice",
-    time: "3h",
-    unread: 1,
+    lastMessage: "",
+    time: "",
+    unread: 0,
   },
   {
     id: 5,
@@ -293,8 +294,8 @@ export const groupChats = [
     members: 16,
     avatar:
       "https://images.unsplash.com/photo-1562593028-1fe2d15bde36?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "Mdm Siti: Stall recommendations pinned above",
-    time: "Yesterday",
+    lastMessage: "",
+    time: "",
     unread: 0,
   },
   {
@@ -303,8 +304,8 @@ export const groupChats = [
     members: 34,
     avatar:
       "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "James: Tournament bracket posted. Check pinned message",
-    time: "Yesterday",
+    lastMessage: "",
+    time: "",
     unread: 0,
   },
   {
@@ -313,8 +314,8 @@ export const groupChats = [
     members: 8,
     avatar:
       "https://images.unsplash.com/photo-1502294624983-4ba589803a55?w=64&h=64&fit=crop&auto=format",
-    lastMessage: "Uncle Ravi: Tide looks good for Saturday. Bring sunscreen!",
-    time: "2 days ago",
+    lastMessage: "",
+    time: "",
     unread: 0,
   },
 ];
@@ -325,7 +326,6 @@ export const mapPins = [
     activityId: 1,
     latitude: 1.295,
     longitude: 103.8465,
-    type: "wellness",
     label: "Tai Chi - Fort Canning",
     premium: true,
   },
@@ -334,7 +334,6 @@ export const mapPins = [
     activityId: 2,
     latitude: 1.2823,
     longitude: 103.8433,
-    type: "food",
     label: "Hawker Walk - Chinatown",
     premium: true,
   },
@@ -343,7 +342,6 @@ export const mapPins = [
     activityId: 3,
     latitude: 1.3138,
     longitude: 103.8159,
-    type: "photo",
     label: "Botanic Gardens",
     premium: true,
   },
@@ -352,7 +350,6 @@ export const mapPins = [
     activityId: 4,
     latitude: 1.3008,
     longitude: 103.9122,
-    type: "hiking",
     label: "East Coast Park Walk",
   },
   {
@@ -360,7 +357,6 @@ export const mapPins = [
     activityId: 5,
     latitude: 1.3508,
     longitude: 103.8485,
-    type: "chess",
     label: "Chess Club - Bishan CC",
   },
   {
@@ -368,7 +364,6 @@ export const mapPins = [
     activityId: 6,
     latitude: 1.3343,
     longitude: 103.8563,
-    type: "food",
     label: "Cooking Class - Toa Payoh",
   },
   {
@@ -376,7 +371,6 @@ export const mapPins = [
     activityId: 7,
     latitude: 1.4022,
     longitude: 103.9605,
-    type: "fishing",
     label: "Kelong Day Trip",
   },
   {
@@ -384,7 +378,6 @@ export const mapPins = [
     activityId: 8,
     latitude: 1.2848,
     longitude: 103.8329,
-    type: "social",
     label: "Book Club - Tiong Bahru",
   },
 ];

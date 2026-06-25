@@ -11,8 +11,10 @@ import {
   standardActivities,
 } from "./data.js";
 import {
+  AdminModel,
   ActivityJoinModel,
   ActivityModel,
+  ChatMessageModel,
   ChatModel,
   FeedPostModel,
   FriendshipModel,
@@ -41,6 +43,21 @@ function isPremiumActivity(
   return "cover" in activity;
 }
 
+function uniqueObjectIds(ids: Types.ObjectId[]) {
+  const seen = new Set<string>();
+
+  return ids.filter((id) => {
+    const key = String(id);
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
 async function dropLegacyCollections() {
   const collections = await mongoose.connection.db?.listCollections().toArray();
   const existingCollections = new Set(collections?.map((item) => item.name));
@@ -66,6 +83,8 @@ async function seed() {
       UserModel.deleteMany(),
       FriendshipModel.deleteMany(),
       ChatModel.deleteMany(),
+      AdminModel.deleteMany(),
+      ChatMessageModel.deleteMany(),
       ActivityModel.deleteMany(),
       ActivityJoinModel.deleteMany(),
       MapPinModel.deleteMany(),
@@ -89,6 +108,14 @@ async function seed() {
     ]);
 
     for (const friend of friends) {
+      const existingUserId = userByHandle.get(friend.handle);
+
+      if (existingUserId) {
+        userByMockId.set(friend.id, existingUserId);
+        userByName.set(friend.name, existingUserId);
+        continue;
+      }
+
       const user = await UserModel.create({
         mockId: friend.id,
         name: friend.name,
@@ -106,6 +133,10 @@ async function seed() {
       const friendId = userByMockId.get(friend.id);
 
       if (!friendId) {
+        continue;
+      }
+
+      if (String(friendId) === String(linda._id)) {
         continue;
       }
 
@@ -128,7 +159,13 @@ async function seed() {
     const chatByMockId = new Map<number, Types.ObjectId>();
 
     for (const chat of groupChats) {
-      const chatMembers = [linda._id, ...friends.slice(0, 5).map((friend) => userByMockId.get(friend.id)).filter(Boolean)];
+      const chatMembers = uniqueObjectIds([
+        linda._id,
+        ...friends
+          .slice(0, 5)
+          .map((friend) => userByMockId.get(friend.id))
+          .filter((id): id is Types.ObjectId => Boolean(id)),
+      ]);
       const savedChat = await ChatModel.create({
         mockId: chat.id,
         name: chat.name,
@@ -137,6 +174,10 @@ async function seed() {
         lastMessage: chat.lastMessage,
         time: chat.time,
         unread: chat.unread,
+      });
+      await AdminModel.create({
+        user: linda._id,
+        group: savedChat._id,
       });
 
       chatByMockId.set(chat.id, savedChat._id);
@@ -152,9 +193,6 @@ async function seed() {
         groupChats.find((chat) =>
           activity.title.toLowerCase().includes(chat.name.toLowerCase()),
         ) ??
-        groupChats.find((chat) =>
-          chat.name.toLowerCase().includes(activity.type.toLowerCase()),
-        ) ??
         groupChats[0];
       const chatId = chatByMockId.get(matchingChat.id);
       const host =
@@ -163,18 +201,19 @@ async function seed() {
         linda._id;
       const joiningFriends = activity.joiningFriends
         .map((friend) => userByMockId.get(friend.id))
-        .filter(Boolean);
+        .filter((id): id is Types.ObjectId => Boolean(id));
       const savedActivity = await ActivityModel.create({
         mockId: activity.id,
         title: activity.title,
         host,
-        type: activity.type,
         date: activity.date,
         time: activity.time,
         location: activity.location,
+        durationMinutes: activity.durationMinutes,
         spots: activity.spots,
         price: activity.price,
         rating: activity.rating,
+        categories: activity.categories,
         chat: chatId,
         isPremium: isPremiumActivity(activity),
         cover: isPremiumActivity(activity) ? activity.cover : undefined,
@@ -183,12 +222,14 @@ async function seed() {
 
       activityByMockId.set(activity.id, savedActivity._id);
 
-      await ActivityJoinModel.create(
-        joiningFriends.map((userId) => ({
-          userId,
-          activityId: savedActivity._id,
-        })),
-      );
+      const activityJoinRows = uniqueObjectIds(joiningFriends).map((userId) => ({
+        userId,
+        activityId: savedActivity._id,
+      }));
+
+      if (activityJoinRows.length > 0) {
+        await ActivityJoinModel.create(activityJoinRows);
+      }
     }
 
     for (const pin of mapPins) {
@@ -203,7 +244,6 @@ async function seed() {
         activity: activityId,
         latitude: pin.latitude,
         longitude: pin.longitude,
-        type: pin.type,
         label: pin.label,
         premium: pin.premium,
       });

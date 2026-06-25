@@ -1,15 +1,19 @@
 import { Clock, Heart, MapPin, Star } from "lucide-react";
+import { ActivityCategoryIndicators } from "./ActivityCategoryIndicators";
 import { FriendAvatars } from "./FriendAvatars";
 import {
-  activityTypeColor,
-  activityTypeIcon,
+  categoriesForActivity,
+  categoryIcon,
+  primaryActivityCategory,
+  vitaCategoryColor,
 } from "../lib/activityPresentation";
-import type { PremiumActivity, StandardActivity } from "../lib/types";
+import type { Activity, PremiumActivity } from "../lib/types";
 import { useAppState } from "../state";
 
 export function PremiumCard({ activity }: { activity: PremiumActivity }) {
   const { likedActivityIds, openActivity, toggleActivityLike } = useAppState();
   const liked = Boolean(likedActivityIds[activity.id]);
+  const categories = categoriesForActivity(activity.categories);
 
   return (
     <div
@@ -25,15 +29,15 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
       className="relative rounded-2xl overflow-hidden flex-shrink-0 w-64 text-left active:scale-[0.98] transition-transform"
       style={{
         boxShadow:
-          "0 0 0 1.5px #c9993a, 0 4px 24px rgba(201,153,58,0.18)",
+          "0 0 0 1.5px var(--brand-yellow), 0 8px 28px rgba(244,185,80,0.2)",
       }}
       aria-label={`Open ${activity.title}`}
     >
       <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5">
-        <Star size={9} fill="#c9993a" stroke="none" />
+        <Star size={9} fill="var(--brand-yellow)" stroke="none" />
         <span
           className="text-[9px] font-bold tracking-wide"
-          style={{ color: "#c9993a" }}
+          style={{ color: "var(--brand-yellow)" }}
         >
           PREMIUM
         </span>
@@ -48,8 +52,8 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
       >
         <Heart
           size={12}
-          fill={liked ? "#f87171" : "none"}
-          stroke={liked ? "#f87171" : "#f0ede8"}
+          fill={liked ? "var(--brand-pink)" : "none"}
+          stroke={liked ? "var(--brand-pink)" : "var(--foreground)"}
         />
       </button>
       <div className="relative h-32 bg-secondary overflow-hidden">
@@ -75,6 +79,12 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
             {activity.location}
           </span>
         </div>
+        <div className="mb-2">
+          <ActivityCategoryIndicators
+            categories={categories}
+            durationMinutes={activity.durationMinutes}
+          />
+        </div>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1">
             <Clock size={9} className="text-muted-foreground" />
@@ -83,7 +93,7 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
             </span>
           </div>
           <div className="flex items-center gap-0.5">
-            <Star size={9} fill="#c9993a" stroke="none" />
+            <Star size={9} fill="var(--brand-yellow)" stroke="none" />
             <span className="text-[10px] text-foreground font-medium">
               {activity.rating}
             </span>
@@ -105,8 +115,11 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
   );
 }
 
-export function StandardRow({ activity }: { activity: StandardActivity }) {
+export function StandardRow({ activity }: { activity: Activity }) {
   const { openActivity } = useAppState();
+  const categories = categoriesForActivity(activity.categories);
+  const primaryCategory = primaryActivityCategory(activity.categories);
+  const primaryColor = vitaCategoryColor[primaryCategory];
 
   return (
     <button
@@ -118,11 +131,11 @@ export function StandardRow({ activity }: { activity: StandardActivity }) {
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
-            backgroundColor: `${activityTypeColor[activity.type]}22`,
-            color: activityTypeColor[activity.type],
+            backgroundColor: `${primaryColor}22`,
+            color: primaryColor,
           }}
         >
-          {activityTypeIcon(activity.type, 18)}
+          {categoryIcon(primaryCategory, 18)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
@@ -142,9 +155,15 @@ export function StandardRow({ activity }: { activity: StandardActivity }) {
               {activity.time}
             </span>
           </div>
+          <div className="mt-1">
+            <ActivityCategoryIndicators
+              categories={categories}
+              durationMinutes={activity.durationMinutes}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Star size={9} fill="#c9993a" stroke="none" />
+          <Star size={9} fill="var(--brand-yellow)" stroke="none" />
           <span className="text-[10px] text-muted-foreground">
             {activity.rating}
           </span>

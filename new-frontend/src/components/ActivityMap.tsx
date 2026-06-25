@@ -2,20 +2,14 @@ import { ChevronDown } from "lucide-react";
 import type { LatLngExpression } from "leaflet";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import {
-  activityTypeColor,
-  activityTypeIcon,
+  categoryIcon,
+  primaryActivityCategory,
+  vitaCategories,
+  vitaCategoryColor,
+  vitaCategoryLabel,
 } from "../lib/activityPresentation";
-import type { ActivityType, MapPin } from "../lib/types";
+import type { MapPin } from "../lib/types";
 import { useAppState } from "../state";
-
-const legendTypes: ActivityType[] = [
-  "wellness",
-  "food",
-  "photo",
-  "hiking",
-  "chess",
-  "fishing",
-];
 
 const singaporeCenter: LatLngExpression = [1.335, 103.86];
 const userLocation: LatLngExpression = [1.321, 103.845];
@@ -76,7 +70,8 @@ export function ActivityMap({ onClose }: { onClose: () => void }) {
           </CircleMarker>
 
           {mapPins.map((pin) => {
-            const color = pin.premium ? "#c9993a" : activityTypeColor[pin.type];
+            const primaryCategory = primaryActivityCategory(pin.categories);
+            const color = vitaCategoryColor[primaryCategory];
 
             return (
               <CircleMarker
@@ -86,8 +81,8 @@ export function ActivityMap({ onClose }: { onClose: () => void }) {
                   click: () => openActivity(pin.activityId),
                 }}
                 pathOptions={{
-                  color: pin.premium ? "#e8b84b" : color,
-                  fillColor: pin.premium ? "#c9993a" : "#252527",
+                  color,
+                  fillColor: pin.premium ? color : "#302c40",
                   fillOpacity: 0.95,
                   weight: 2,
                 }}
@@ -113,19 +108,19 @@ export function ActivityMap({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="px-4 py-3 flex gap-3 overflow-x-auto scrollbar-minimal">
-        {legendTypes.map((type) => (
-          <div key={type} className="flex items-center gap-1.5 flex-shrink-0">
+        {vitaCategories.map((category) => (
+          <div key={category} className="flex items-center gap-1.5 flex-shrink-0">
             <div
               className="w-4 h-4 rounded-full flex items-center justify-center"
               style={{
-                backgroundColor: `${activityTypeColor[type]}22`,
-                color: activityTypeColor[type],
+                backgroundColor: `${vitaCategoryColor[category]}22`,
+                color: vitaCategoryColor[category],
               }}
             >
-              {activityTypeIcon(type, 9)}
+              {categoryIcon(category, 9)}
             </div>
             <span className="text-[10px] text-muted-foreground capitalize">
-              {type}
+              {vitaCategoryLabel[category]}
             </span>
           </div>
         ))}

@@ -2,34 +2,40 @@
 
 :root {
   --font-size: 16px;
-  --background: #0e0e0f;
-  --foreground: #f0ede8;
-  --card: #1a1a1c;
-  --card-foreground: #f0ede8;
-  --popover: #1a1a1c;
-  --popover-foreground: #f0ede8;
-  --primary: #f0ede8;
-  --primary-foreground: #0e0e0f;
-  --secondary: #252527;
-  --secondary-foreground: #f0ede8;
-  --muted: #252527;
-  --muted-foreground: #8a8880;
-  --accent: #c9993a;
-  --accent-foreground: #0e0e0f;
+  --background: #171625;
+  --foreground: #f4f0ea;
+  --card: #242234;
+  --card-foreground: #f4f0ea;
+  --popover: #242234;
+  --popover-foreground: #f4f0ea;
+  --primary: #f4f0ea;
+  --primary-foreground: #171625;
+  --secondary: #302c40;
+  --secondary-foreground: #f4f0ea;
+  --muted: #302c40;
+  --muted-foreground: #b9b3aa;
+  --accent: #f4b950;
+  --accent-foreground: #171625;
+  --brand-ink: #171625;
+  --brand-green: #4bd178;
+  --brand-yellow: #f4b950;
+  --brand-pink: #dc4aa7;
+  --brand-blue: #6577ff;
+  --brand-shadow: rgba(8, 8, 18, 0.36);
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(244, 240, 234, 0.12);
   --input: transparent;
-  --input-background: #252527;
-  --switch-background: #3a3a3d;
+  --input-background: #302c40;
+  --switch-background: #40394f;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #c9993a;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: #f4b950;
+  --chart-1: #4bd178;
+  --chart-2: #f4b950;
+  --chart-3: #dc4aa7;
+  --chart-4: #6577ff;
+  --chart-5: #f4f0ea;
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -126,6 +132,8 @@
 
   body {
     @apply bg-background text-foreground;
+    background:
+      linear-gradient(180deg, #171625 0%, #211a2d 48%, #171b28 100%);
     margin: 0;
   }
 
@@ -209,28 +217,217 @@
     background: color-mix(in srgb, var(--accent) 55%, transparent);
   }
 
-  .leaflet-container {
-    background: var(--secondary);
-    font-family: 'Plus Jakarta Sans', sans-serif;
+  .vita-phone-shell {
+    background:
+      linear-gradient(180deg, rgba(244, 185, 80, 0.07), transparent 22%),
+      linear-gradient(180deg, var(--background), #1b1a2a 54%, #171625);
   }
 
-  .leaflet-popup-content-wrapper,
-  .leaflet-popup-tip {
-    background: var(--foreground);
-    color: var(--background);
+  .vita-top-logo {
+    position: absolute;
+    top: 0.7rem;
+    left: 50%;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transform: translateX(-50%);
+    background: transparent;
+    overflow: visible;
   }
 
-  .leaflet-popup-content {
-    margin: 10px 12px;
+  .vita-top-logo__mark {
+    width: 3.65rem;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    filter: drop-shadow(0 10px 16px var(--brand-shadow));
   }
 
-  .leaflet-control-attribution {
-    background: color-mix(in srgb, var(--background) 78%, transparent);
+  .vita-logo-expand-button,
+  .vita-logo-close-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(244, 240, 234, 0.16);
+    background: color-mix(in srgb, var(--card) 78%, transparent);
+    color: var(--foreground);
+    box-shadow: 0 12px 28px rgba(8, 8, 18, 0.25);
+    transition:
+      transform 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .vita-logo-expand-button {
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 999px;
+  }
+
+  .vita-logo-close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+  }
+
+  .vita-logo-expand-button:active,
+  .vita-logo-close-button:active,
+  .vita-top-logo__mark:active {
+    transform: scale(0.94);
+  }
+
+  .vita-logo-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 8, 18, 0.34);
+    backdrop-filter: blur(3px);
+  }
+
+  .vita-logo-overlay::before {
+    content: "";
+    position: absolute;
+    width: min(72vw, 19rem);
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle, rgba(244, 185, 80, 0.24), transparent 58%),
+      radial-gradient(circle at 38% 44%, rgba(75, 209, 120, 0.18), transparent 48%),
+      radial-gradient(circle at 62% 58%, rgba(101, 119, 255, 0.22), transparent 52%);
+    filter: blur(18px);
+    opacity: 0.95;
+    pointer-events: none;
+  }
+
+  .vita-logo-overlay .vita-progress-logo {
+    filter:
+      drop-shadow(0 24px 38px rgba(8, 8, 18, 0.48))
+      drop-shadow(0 0 28px rgba(244, 185, 80, 0.16));
+  }
+
+  .vita-bottom-logo-button {
+    margin-top: -1.75rem;
+    padding-top: 0;
     color: var(--muted-foreground);
-    font-size: 9px;
+    overflow: visible;
   }
 
-  .leaflet-control-attribution a {
-    color: var(--accent);
+  .vita-bottom-logo-button .vita-progress-logo {
+    width: 5.35rem;
+    filter:
+      drop-shadow(0 12px 18px rgba(8, 8, 18, 0.38))
+      drop-shadow(0 0 14px rgba(244, 185, 80, 0.16));
+  }
+
+  .vita-auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .vita-progress-logo {
+    --logo-icon-size: 1.1rem;
+    position: relative;
+    width: 5.35rem;
+    aspect-ratio: 1;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .vita-progress-logo--expanded {
+    --logo-icon-size: 3rem;
+    width: min(76vw, 21rem);
+  }
+
+  .vita-progress-logo__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .vita-progress-logo__portion {
+    outline: none;
+  }
+
+  .vita-progress-logo--interactive .vita-progress-logo__portion {
+    cursor: pointer;
+  }
+
+  .vita-progress-logo__portion:focus-visible .vita-progress-logo__outline {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 3;
+  }
+
+  .vita-progress-logo__empty {
+    fill: #696773;
+  }
+
+  .vita-progress-logo__fill {
+    transition:
+      height 180ms ease,
+      y 180ms ease;
+  }
+
+  .vita-progress-logo__outline {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 1;
+  }
+
+  .vita-progress-logo__icons {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .vita-progress-logo__icon {
+    position: absolute;
+    width: var(--logo-icon-size);
+    height: var(--logo-icon-size);
+    color: rgba(255, 255, 255, 0.92);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+    transform: translate(-50%, -50%);
+  }
+
+  .vita-progress-logo__icon--physical {
+    left: 25%;
+    top: 29%;
+  }
+
+  .vita-progress-logo__icon--social {
+    left: 75%;
+    top: 29%;
+  }
+
+  .vita-progress-logo__icon--cognitive {
+    left: 38%;
+    top: 65%;
+  }
+
+  .vita-progress-logo__icon--creative {
+    left: 62%;
+    top: 65%;
+  }
+
+  .vita-logo-image {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .vita-auth-logo {
+    width: 5.35rem;
+    flex: 0 0 auto;
+    background: transparent;
+    box-shadow:
+      0 20px 42px var(--brand-shadow);
   }
 }

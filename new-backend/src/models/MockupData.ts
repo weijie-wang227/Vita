@@ -50,25 +50,47 @@ const chatSchema = new Schema(
     name: { type: String, required: true },
     avatar: { type: String, required: true },
     members: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    lastMessage: { type: String, required: true },
-    time: { type: String, required: true },
+    lastMessage: { type: String, default: "" },
+    time: { type: String, default: "" },
     unread: { type: Number, required: true, default: 0 },
   },
   { timestamps: true },
 );
+chatSchema.index({ members: 1 });
+
+const adminSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    group: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
+  },
+  { timestamps: true },
+);
+adminSchema.index({ user: 1, group: 1 }, { unique: true });
+adminSchema.index({ group: 1 });
+
+const chatMessageSchema = new Schema(
+  {
+    chat: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
+    sender: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    body: { type: String, required: true, trim: true, maxlength: 1000 },
+  },
+  { timestamps: true },
+);
+chatMessageSchema.index({ chat: 1, createdAt: 1 });
 
 const activitySchema = new Schema(
   {
     mockId: { type: Number, required: true, unique: true },
     title: { type: String, required: true },
     host: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    type: { type: String, required: true },
     date: { type: String, required: true },
     time: { type: String, required: true },
     location: { type: String, required: true },
+    durationMinutes: { type: Number, required: true },
     spots: { type: Number, required: true },
     price: { type: String, required: true },
     rating: { type: Number, required: true },
+    categories: [{ type: String, required: true }],
     chat: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
     isPremium: { type: Boolean, required: true, default: false },
     cover: { type: String },
@@ -92,7 +114,6 @@ const mapPinSchema = new Schema(
     activity: { type: Schema.Types.ObjectId, required: true, ref: "Activity" },
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
-    type: { type: String, required: true },
     label: { type: String, required: true },
     premium: { type: Boolean },
   },
@@ -103,10 +124,11 @@ const feedPostSchema = new Schema(
   {
     mockId: { type: Number, required: true, unique: true },
     user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    activity: { type: Schema.Types.ObjectId, required: true, ref: "Activity" },
+    activity: { type: Schema.Types.ObjectId, ref: "Activity" },
+    group: { type: Schema.Types.ObjectId, ref: "Chat" },
     time: { type: String, required: true },
     caption: { type: String, required: true },
-    image: { type: String, required: true },
+    image: { type: String },
     likes: { type: Number, required: true, default: 0 },
     comments: { type: Number, required: true, default: 0 },
   },
@@ -120,6 +142,12 @@ export const FriendshipModel = mongoose.model(
   "friendships",
 );
 export const ChatModel = mongoose.model<any>("Chat", chatSchema, "chats");
+export const AdminModel = mongoose.model<any>("Admin", adminSchema, "admins");
+export const ChatMessageModel = mongoose.model<any>(
+  "ChatMessage",
+  chatMessageSchema,
+  "chatMessages",
+);
 export const ActivityModel = mongoose.model<any>(
   "Activity",
   activitySchema,

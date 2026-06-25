@@ -1,14 +1,115 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TouchEvent } from "react";
-import { ChevronDown, Navigation, Plus, Search, Star } from "lucide-react";
+import {
+  CalendarCheck,
+  ChevronDown,
+  Maximize2,
+  Minimize2,
+  Navigation,
+  Plus,
+  Search,
+  Star,
+} from "lucide-react";
 import { ActivityMap } from "../components/ActivityMap";
+import { BaseSearchBar } from "../components/BaseSearchBar";
 import { PremiumCard, StandardRow } from "../components/ActivityCards";
+import { CreateActivityModal } from "../components/CreateActivityModal";
+import { FloatingActionButton } from "../components/FloatingActionButton";
+import type { Activity } from "../lib/types";
 import { useAppState } from "../state";
 
+function searchableActivityText(activity: Activity) {
+  return [
+    activity.title,
+    activity.host,
+    activity.date,
+    activity.time,
+    activity.location,
+    activity.price,
+    activity.rating,
+    activity.categories.join(" "),
+    activity.joiningFriends
+      .map((friend) => `${friend.name} ${friend.handle}`)
+      .join(" "),
+    "tags" in activity ? activity.tags.join(" ") : "",
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
 export function ActivitiesPage() {
-  const { premiumActivities, setShowMap, showMap, standardActivities } =
-    useAppState();
+  const {
+    joinedActivityIds,
+    premiumActivities,
+    profile,
+    setShowMap,
+    showMap,
+    standardActivities,
+  } = useAppState();
   const startY = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [createActivityOpen, setCreateActivityOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [showAllUpcomingActivities, setShowAllUpcomingActivities] =
+    useState(false);
+  const activeSearchQuery = debouncedSearchQuery.toLowerCase();
+  const activityMatchesSearch = (activity: Activity) =>
+    searchableActivityText(activity).includes(activeSearchQuery);
+  const filteredPremiumActivities = activeSearchQuery
+    ? premiumActivities.filter(activityMatchesSearch)
+    : premiumActivities;
+  const filteredStandardActivities = activeSearchQuery
+    ? standardActivities.filter(activityMatchesSearch)
+    : standardActivities;
+  const filteredActivities = [
+    ...filteredPremiumActivities,
+    ...filteredStandardActivities,
+  ];
+  const joinedActivityOrder = new Map(
+    joinedActivityIds.map((activityId, index) => [activityId, index]),
+  );
+  const upcomingActivities = filteredActivities
+    .filter((activity) =>
+      activity.joiningFriends.some((friend) => friend.handle === profile.handle),
+    )
+    .sort((firstActivity, secondActivity) => {
+      const firstOrder =
+        joinedActivityOrder.get(firstActivity.id) ?? Number.POSITIVE_INFINITY;
+      const secondOrder =
+        joinedActivityOrder.get(secondActivity.id) ?? Number.POSITIVE_INFINITY;
+
+      if (firstOrder === secondOrder) {
+        return 0;
+      }
+
+      return firstOrder - secondOrder;
+    });
+  const visibleUpcomingActivities = showAllUpcomingActivities
+    ? upcomingActivities
+    : upcomingActivities.slice(0, 3);
+  const canExpandUpcomingActivities = upcomingActivities.length > 3;
+  const hasSearchResults =
+    filteredPremiumActivities.length > 0 || filteredStandardActivities.length > 0;
+
+  useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [searchOpen]);
+
+  const handleOpenSearch = () => {
+    if (showMap) {
+      setShowMap(false);
+    }
+
+    setSearchOpen(true);
+  };
+
+  const handleClearSearch = () => {
+    setSearchOpen(false);
+  };
 
   const handleTouchStart = (event: TouchEvent) => {
     startY.current = event.touches[0].clientY;
@@ -46,13 +147,34 @@ export function ActivitiesPage() {
             <Navigation size={15} />
           </button>
           <button
+            onClick={handleOpenSearch}
             className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
             aria-label="Search activities"
           >
-            <Search size={15} className="text-muted-foreground" />
+            <Search
+              size={19}
+              strokeWidth={2.4}
+              className="text-muted-foreground"
+            />
           </button>
         </div>
       </div>
+
+      {!showMap && (searchOpen || searchQuery) && (
+        <div className="px-4 pb-3">
+          <BaseSearchBar
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            onDebouncedQueryChange={setDebouncedSearchQuery}
+            inputRef={searchInputRef}
+            placeholder="Search activities"
+            ariaLabel="Search activities"
+            clearable
+            clearAriaLabel="Clear activity search"
+            onClear={handleClearSearch}
+          />
+        </div>
+      )}
 
       {!showMap && (
         <button
@@ -80,46 +202,96 @@ export function ActivitiesPage() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <div className="px-4 mb-2">
-            <div className="flex items-center gap-2">
-              <Star size={11} fill="#c9993a" stroke="none" />
-              <span
-                className="text-[11px] font-bold tracking-wider"
-                style={{ color: "#c9993a" }}
-              >
-                PREMIUM EXPERIENCES
-              </span>
+          {filteredPremiumActivities.length > 0 && (
+            <>
+              <div className="px-4 mb-2">
+                <div className="flex items-center gap-2">
+                  <Star size={11} fill="var(--brand-yellow)" stroke="none" />
+                  <span
+                    className="text-[11px] font-bold tracking-wider"
+                    style={{ color: "var(--brand-yellow)" }}
+                  >
+                    PREMIUM EXPERIENCES
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-3 px-4 pb-4 overflow-x-auto scrollbar-minimal">
+                {filteredPremiumActivities.map((activity) => (
+                  <PremiumCard key={activity.id} activity={activity} />
+                ))}
+              </div>
+            </>
+          )}
+          {upcomingActivities.length > 0 && (
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarCheck size={12} className="text-accent" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Upcoming Activities
+                </span>
+                <div className="flex-1 h-px bg-border" />
+                {canExpandUpcomingActivities && (
+                  <button
+                    onClick={() =>
+                      setShowAllUpcomingActivities((current) => !current)
+                    }
+                    className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={
+                      showAllUpcomingActivities
+                        ? "Show fewer upcoming activities"
+                        : "Show all upcoming activities"
+                    }
+                  >
+                    {showAllUpcomingActivities ? (
+                      <Minimize2 size={13} />
+                    ) : (
+                      <Maximize2 size={13} />
+                    )}
+                  </button>
+                )}
+              </div>
+              {visibleUpcomingActivities.map((activity) => (
+                <StandardRow key={activity.id} activity={activity} />
+              ))}
             </div>
-          </div>
-          <div className="flex gap-3 px-4 pb-4 overflow-x-auto scrollbar-minimal">
-            {premiumActivities.map((activity) => (
-              <PremiumCard key={activity.id} activity={activity} />
-            ))}
-          </div>
-          <div className="px-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                All Activities
-              </span>
-              <div className="flex-1 h-px bg-border" />
+          )}
+          {filteredStandardActivities.length > 0 && (
+            <div className="px-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  All Activities
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              {filteredStandardActivities.map((activity) => (
+                <StandardRow key={activity.id} activity={activity} />
+              ))}
             </div>
-            {standardActivities.map((activity) => (
-              <StandardRow key={activity.id} activity={activity} />
-            ))}
-          </div>
+          )}
+          {activeSearchQuery && !hasSearchResults && (
+            <div className="flex min-h-40 items-center justify-center px-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No activities match your search.
+              </p>
+            </div>
+          )}
           <div className="h-6" />
         </div>
       )}
 
       {!showMap && (
-        <button
-          className="absolute bottom-20 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl z-20 active:scale-95 transition-transform"
-          style={{ background: "linear-gradient(135deg, #e8b84b, #c9993a)" }}
+        <FloatingActionButton
+          onClick={() => setCreateActivityOpen(true)}
           aria-label="Add activity"
         >
-          <Plus size={22} color="#0e0e0f" strokeWidth={2.5} />
-        </button>
+          <Plus size={22} color="var(--accent-foreground)" strokeWidth={2.5} />
+        </FloatingActionButton>
       )}
+
+      <CreateActivityModal
+        open={createActivityOpen}
+        onClose={() => setCreateActivityOpen(false)}
+      />
     </div>
   );
 }

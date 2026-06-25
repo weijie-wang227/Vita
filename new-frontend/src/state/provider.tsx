@@ -1,16 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   clearAuthToken,
-  fetchCurrentUser,
-  fetchFeedPosts,
-  fetchFriends,
-  fetchGroupChats,
-  fetchMapPins,
-  fetchPremiumActivities,
-  fetchProfile,
-  fetchStandardActivities,
-  getAuthToken,
+  createActivity as requestCreateActivity,
+  createFeedPost as requestCreateFeedPost,
   setAuthToken,
   signIn as requestSignIn,
   signUp as requestSignUp,
@@ -18,13 +11,14 @@ import {
 import {
   feedPosts as fallbackFeedPosts,
   friends as fallbackFriends,
-  groupChats as fallbackGroupChats,
   mapPins as fallbackMapPins,
   premiumActivities as fallbackPremiumActivities,
   profile as fallbackProfile,
   standardActivities as fallbackStandardActivities,
 } from "../data/mockData";
 import type {
+  Activity,
+  ChatMessage,
   FeedPost,
   Friend,
   GroupChat,
@@ -34,7 +28,26 @@ import type {
   StandardActivity,
 } from "../lib/types";
 import { AppStateContext } from "./context";
+import {
+  useGroupMessageActions,
+  useJoinActivityAction,
+  useJoinGroupAction,
+} from "./providerActions";
+import { useLoadAppData, useRestoreSession } from "./providerEffects";
+import {
+  activityIdsJoinedByProfile,
+  createLocalActivity,
+  createLocalFeedPost,
+  markRecentActivityId,
+  replaceActivity,
+  upsertGroup,
+} from "./providerHelpers";
 import type { AppState, AppTab } from "./types";
+
+const fallbackJoinedActivityIds = activityIdsJoinedByProfile(
+  [...fallbackPremiumActivities, ...fallbackStandardActivities],
+  fallbackProfile.handle,
+);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<AppTab>("activities");
@@ -50,7 +63,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     StandardActivity[]
   >(fallbackStandardActivities);
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>(fallbackFeedPosts);
-  const [groupChats, setGroupChats] = useState<GroupChat[]>(fallbackGroupChats);
+  const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    Record<number, ChatMessage[]>
+  >({});
   const [friends, setFriends] = useState<Friend[]>(fallbackFriends);
   const [mapPins, setMapPins] = useState<MapPin[]>(fallbackMapPins);
   const [profile, setProfile] = useState<Profile>(fallbackProfile);
@@ -67,107 +83,68 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [likedActivityIds, setLikedActivityIds] = useState<
     Record<number, boolean>
   >({});
+  const [joinedActivityIds, setJoinedActivityIds] = useState<number[]>(
+    fallbackJoinedActivityIds,
+  );
 
-  useEffect(() => {
-    let ignore = false;
+  useRestoreSession({
+    setAuthError,
+    setAuthUser,
+    setIsAuthReady,
+    setProfile,
+  });
 
-    async function restoreSession() {
-      const token = getAuthToken();
+  useLoadAppData({
+    authUser,
+    isAuthReady,
+    setApiError,
+    setFeedPosts,
+    setFriends,
+    setGroupChats,
+    setIsLoading,
+    setMapPins,
+    setPremiumActivities,
+    setJoinedActivityIds,
+    setProfile,
+    setStandardActivities,
+  });
 
-      if (!token) {
-        setIsAuthReady(true);
-        return;
-      }
-
-      try {
-        const { user } = await fetchCurrentUser();
-
-        if (ignore) {
-          return;
-        }
-
-        setAuthUser(user);
-        setProfile(user);
-        setAuthError(null);
-      } catch {
-        clearAuthToken();
-
-        if (!ignore) {
-          setAuthUser(null);
-        }
-      } finally {
-        if (!ignore) {
-          setIsAuthReady(true);
-        }
-      }
+  const applyActivityUpdate = useCallback((activity: Activity) => {
+    if ("cover" in activity) {
+      setPremiumActivities((current) => replaceActivity(current, activity));
+      return;
     }
 
-    restoreSession();
-
-    return () => {
-      ignore = true;
-    };
+    setStandardActivities((current) => replaceActivity(current, activity));
   }, []);
 
-  useEffect(() => {
-    let ignore = false;
+  const applyGroupUpdate = useCallback((group: GroupChat) => {
+    setGroupChats((current) => upsertGroup(current, group));
+  }, []);
 
-    async function loadAppData() {
-      if (!isAuthReady || !authUser) {
-        setIsLoading(false);
-        return;
-      }
+  const { loadGroupMessages, sendGroupMessage } = useGroupMessageActions({
+    applyGroupUpdate,
+    setApiError,
+    setChatMessages,
+  });
 
-      setIsLoading(true);
+  const joinActivity = useJoinActivityAction({
+    applyActivityUpdate,
+    applyGroupUpdate,
+    setActiveTab,
+    setApiError,
+    setJoinedActivityIds,
+    setSelectedActivityId,
+    setSelectedGroupId,
+  });
 
-      try {
-        const [
-          nextPremiumActivities,
-          nextStandardActivities,
-          nextFeedPosts,
-          nextGroupChats,
-          nextFriends,
-          nextMapPins,
-          nextProfile,
-        ] = await Promise.all([
-          fetchPremiumActivities(),
-          fetchStandardActivities(),
-          fetchFeedPosts(),
-          fetchGroupChats(),
-          fetchFriends(),
-          fetchMapPins(),
-          fetchProfile(),
-        ]);
-
-        if (ignore) {
-          return;
-        }
-
-        setPremiumActivities(nextPremiumActivities);
-        setStandardActivities(nextStandardActivities);
-        setFeedPosts(nextFeedPosts);
-        setGroupChats(nextGroupChats);
-        setFriends(nextFriends);
-        setMapPins(nextMapPins);
-        setProfile(nextProfile);
-        setApiError(null);
-      } catch (error) {
-        if (!ignore) {
-          setApiError(error instanceof Error ? error.message : "API unavailable");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadAppData();
-
-    return () => {
-      ignore = true;
-    };
-  }, [authUser, isAuthReady]);
+  const joinGroup = useJoinGroupAction({
+    applyGroupUpdate,
+    setActiveTab,
+    setApiError,
+    setSelectedActivityId,
+    setSelectedGroupId,
+  });
 
   const appState = useMemo<AppState>(
     () => ({
@@ -187,9 +164,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       standardActivities,
       feedPosts,
       groupChats,
+      chatMessages,
       friends,
       mapPins,
       profile,
+      joinedActivityIds,
       likedPostIds,
       likedActivityIds,
       signIn: async (input) => {
@@ -204,6 +183,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setShowProfile(false);
           setSelectedActivityId(null);
           setSelectedGroupId(null);
+          setJoinedActivityIds([]);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Unable to sign in";
@@ -223,6 +203,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setShowProfile(false);
           setSelectedActivityId(null);
           setSelectedGroupId(null);
+          setJoinedActivityIds([]);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Unable to sign up";
@@ -230,12 +211,82 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           throw new Error(message);
         }
       },
+      createActivity: async (input) => {
+        try {
+          const { activity, group, mapPin } = await requestCreateActivity(input);
+
+          setStandardActivities((current) => [...current, activity]);
+          setMapPins((current) => [...current, mapPin]);
+          setJoinedActivityIds((current) =>
+            markRecentActivityId(current, activity.id),
+          );
+          applyGroupUpdate(group);
+          setShowMap(false);
+          setApiError(null);
+
+          return activity;
+        } catch (error) {
+          // TODO: Remove this local-only fallback once MongoDB writes are reliable again.
+          const { activity, mapPin } = createLocalActivity(
+            input,
+            profile,
+            standardActivities,
+            premiumActivities,
+            mapPins,
+          );
+
+          setStandardActivities((current) => [...current, activity]);
+          setMapPins((current) => [...current, mapPin]);
+          setJoinedActivityIds((current) =>
+            markRecentActivityId(current, activity.id),
+          );
+          setShowMap(false);
+          setApiError(
+            error instanceof Error
+              ? `${error.message} Created a temporary local activity instead.`
+              : "Created a temporary local activity instead.",
+          );
+
+          return activity;
+        }
+      },
+      createFeedPost: async (input) => {
+        try {
+          const post = await requestCreateFeedPost(input);
+
+          setFeedPosts((current) => [
+            post,
+            ...current.filter((item) => item.id !== post.id),
+          ]);
+          setApiError(null);
+
+          return post;
+        } catch (error) {
+          const post = createLocalFeedPost(input, profile, feedPosts, groupChats);
+
+          setFeedPosts((current) => [post, ...current]);
+          setApiError(
+            error instanceof Error
+              ? `${error.message} Created a temporary local post instead.`
+              : "Created a temporary local post instead.",
+          );
+
+          return post;
+        }
+      },
+      joinActivity,
+      joinGroup,
+      loadGroupMessages,
+      sendGroupMessage,
       signOut: () => {
         clearAuthToken();
         setAuthUser(null);
         setAuthError(null);
         setProfile(fallbackProfile);
         setFriends(fallbackFriends);
+        setGroupChats([]);
+        setChatMessages({});
+        setJoinedActivityIds(fallbackJoinedActivityIds);
         setActiveTab("activities");
         setShowProfile(false);
         setSelectedActivityId(null);
@@ -254,9 +305,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       openProfile: () => {
         setSelectedActivityId(null);
         setSelectedGroupId(null);
-        setShowProfile(true);
+        setShowProfile(false);
+        setActiveTab("profile");
       },
-      closeProfile: () => setShowProfile(false),
+      closeProfile: () => {
+        setShowProfile(false);
+        setActiveTab("activities");
+      },
       setShowMap,
       setShowProfileFriends,
       togglePostLike: (postId) =>
@@ -286,11 +341,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       standardActivities,
       feedPosts,
       groupChats,
+      chatMessages,
       friends,
       mapPins,
       profile,
+      joinedActivityIds,
       likedPostIds,
       likedActivityIds,
+      applyGroupUpdate,
+      joinActivity,
+      joinGroup,
+      loadGroupMessages,
+      sendGroupMessage,
     ],
   );
 

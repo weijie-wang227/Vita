@@ -1,5 +1,8 @@
 import type {
+  ChatMessage,
   AuthUser,
+  CreateActivityInput,
+  CreateFeedPostInput,
   FeedPost,
   Friend,
   GroupChat,
@@ -11,7 +14,7 @@ import type {
   StandardActivity,
 } from "../lib/types";
 
-export type AppTab = "activities" | "feed" | "chat";
+export type AppTab = "activities" | "feed" | "chat" | "profile";
 
 export type AppState = {
   activeTab: AppTab;
@@ -30,13 +33,21 @@ export type AppState = {
   standardActivities: StandardActivity[];
   feedPosts: FeedPost[];
   groupChats: GroupChat[];
+  chatMessages: Record<number, ChatMessage[]>;
   friends: Friend[];
   mapPins: MapPin[];
   profile: Profile;
+  joinedActivityIds: number[];
   likedPostIds: Record<number, boolean>;
   likedActivityIds: Record<number, boolean>;
   signIn: (input: SignInInput) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<void>;
+  createActivity: (input: CreateActivityInput) => Promise<StandardActivity>;
+  createFeedPost: (input: CreateFeedPostInput) => Promise<FeedPost>;
+  joinActivity: (activityId: number) => Promise<GroupChat>;
+  joinGroup: (groupId: number) => Promise<GroupChat>;
+  loadGroupMessages: (groupId: number) => Promise<void>;
+  sendGroupMessage: (groupId: number, body: string) => Promise<ChatMessage>;
   signOut: () => void;
   selectTab: (tab: AppTab) => void;
   openActivity: (activityId: number) => void;

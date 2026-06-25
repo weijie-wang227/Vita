@@ -1,0 +1,7 @@
+
+> mobile-activity-mockup-backend@1.0.0 dev
+> tsx watch src/server.ts
+
+◇ injected env (8) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+Connected to MongoDB database "vida".
+Mobile Activity mockup backend running on http://localhost:4000

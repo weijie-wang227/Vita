@@ -1,48 +1,68 @@
 import {
-  Bike,
-  Camera,
-  Flower2,
-  Mountain,
-  Music,
-  Shield,
+  Activity as ActivityIcon,
+  Brain,
+  Lightbulb,
   Users,
-  UtensilsCrossed,
-  Waves,
 } from "lucide-react";
-import type { ActivityType } from "./types";
+import type { VitaCategory } from "./types";
 
-export const activityTypeColor: Record<ActivityType, string> = {
-  wellness: "#4ade80",
-  food: "#fb923c",
-  photo: "#facc15",
-  hiking: "#38bdf8",
-  chess: "#e879f9",
-  fishing: "#60a5fa",
-  social: "#f87171",
-  bike: "#a78bfa",
+export const vitaCategories: VitaCategory[] = [
+  "physical",
+  "social",
+  "cognitive",
+  "creative",
+];
+
+export const vitaCategoryColor: Record<VitaCategory, string> = {
+  physical: "#4bd178",
+  social: "#f4b950",
+  cognitive: "#dc4aa7",
+  creative: "#6577ff",
 };
 
-export function activityTypeIcon(type: ActivityType, size = 14) {
+export const vitaCategoryLabel: Record<VitaCategory, string> = {
+  physical: "Physical",
+  social: "Social",
+  cognitive: "Cognitive",
+  creative: "Creative",
+};
+
+export function categoryIcon(category: VitaCategory, size = 14) {
   const iconProps = { size, strokeWidth: 2 };
 
-  switch (type) {
-    case "wellness":
-      return <Flower2 {...iconProps} />;
-    case "food":
-      return <UtensilsCrossed {...iconProps} />;
-    case "photo":
-      return <Camera {...iconProps} />;
-    case "hiking":
-      return <Mountain {...iconProps} />;
-    case "chess":
-      return <Shield {...iconProps} />;
-    case "fishing":
-      return <Waves {...iconProps} />;
+  switch (category) {
+    case "physical":
+      return <ActivityIcon {...iconProps} />;
     case "social":
-      return <Music {...iconProps} />;
-    case "bike":
-      return <Bike {...iconProps} />;
+      return <Users {...iconProps} />;
+    case "cognitive":
+      return <Lightbulb {...iconProps} />;
+    case "creative":
+      return <Brain {...iconProps} />;
     default:
       return <Users {...iconProps} />;
   }
+}
+
+export function categoriesForActivity(categories: VitaCategory[] | undefined) {
+  return categories?.length ? categories : ["social"];
+}
+
+export function primaryActivityCategory(categories: VitaCategory[] | undefined) {
+  return categoriesForActivity(categories)[0] ?? "social";
+}
+
+export function formatDuration(minutes: number) {
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (remainingMinutes === 0) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${remainingMinutes} min`;
 }

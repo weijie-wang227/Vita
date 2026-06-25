@@ -1,0 +1,93 @@
+import {
+  Camera,
+  MessageCircle,
+  Mountain,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
+import { VitaProgressLogo, type VitaLogoLevels } from "../components/VitaProgressLogo";
+import { useAppState, type AppTab } from "../state";
+
+type NavItem = {
+  id: AppTab;
+  label: string;
+  Icon: LucideIcon;
+};
+
+const navItems: NavItem[] = [
+  { id: "activities", label: "Activities", Icon: Mountain },
+  { id: "feed", label: "Feed", Icon: Camera },
+  { id: "chat", label: "Groups", Icon: MessageCircle },
+  { id: "profile", label: "Profile", Icon: UserRound },
+];
+
+const leftNavItems = navItems.slice(0, 2);
+const rightNavItems = navItems.slice(2);
+
+function NavButton({ item }: { item: NavItem }) {
+  const { activeTab, selectTab } = useAppState();
+  const active = activeTab === item.id;
+  const color = active ? "var(--accent)" : "var(--muted-foreground)";
+
+  return (
+    <button
+      type="button"
+      onClick={() => selectTab(item.id)}
+      className="flex-1 flex flex-col items-center gap-1 pt-1 active:scale-90 transition-transform"
+    >
+      <div className="relative">
+        <item.Icon size={22} strokeWidth={active ? 2.5 : 1.5} style={{ color }} />
+      </div>
+      <span className="text-[10px] font-semibold" style={{ color }}>
+        {item.label}
+      </span>
+      <div
+        className={`w-1 h-1 rounded-full bg-accent transition-opacity ${
+          active ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </button>
+  );
+}
+
+export function BottomNavigation({
+  levels,
+  onLogoClick,
+}: {
+  levels: VitaLogoLevels;
+  onLogoClick: () => void;
+}) {
+  const { selectedActivityId, selectedGroupId } = useAppState();
+
+  if (selectedActivityId !== null || selectedGroupId !== null) {
+    return null;
+  }
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 z-40 h-20 flex items-start pt-2 px-2"
+      style={{
+        background:
+          "linear-gradient(to top, var(--background) 62%, rgba(23,22,37,0))",
+        borderTop: "1px solid var(--border)",
+      }}
+    >
+      {leftNavItems.map((item) => (
+        <NavButton key={item.id} item={item} />
+      ))}
+
+      <button
+        type="button"
+        className="vita-bottom-logo-button flex-1 flex flex-col items-center gap-0.5 active:scale-90 transition-transform"
+        onClick={onLogoClick}
+        aria-label="Open Vita progress"
+      >
+        <VitaProgressLogo levels={levels} />
+      </button>
+
+      {rightNavItems.map((item) => (
+        <NavButton key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}

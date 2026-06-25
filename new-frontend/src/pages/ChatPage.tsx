@@ -1,38 +1,61 @@
-import { Search, Users } from "lucide-react";
+import { useState } from "react";
+import { Users } from "lucide-react";
+import { BaseSearchBar } from "../components/BaseSearchBar";
 import { useAppState } from "../state";
 
 export function ChatPage() {
-  const { groupChats, openGroup, openProfile, profile } = useAppState();
+  const { groupChats, openGroup } = useAppState();
+  const [groupSearchQuery, setGroupSearchQuery] = useState("");
+  const [debouncedGroupSearchQuery, setDebouncedGroupSearchQuery] =
+    useState("");
+  const activeGroupSearchQuery = debouncedGroupSearchQuery.toLowerCase();
+  const filteredGroupChats = activeGroupSearchQuery
+    ? groupChats.filter((chat) =>
+        [
+          chat.name,
+          chat.lastMessage,
+          chat.time,
+          `${chat.members} members`,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(activeGroupSearchQuery),
+      )
+    : groupChats;
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 pt-5 pb-3">
+      <div className="flex items-center px-4 pt-5 pb-3">
         <h1 className="text-xl font-bold text-foreground">Groups</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={openProfile}
-            className="w-8 h-8 rounded-full overflow-hidden border-2 flex-shrink-0"
-            style={{ borderColor: "#c9993a" }}
-            aria-label="Open profile"
-          >
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-full h-full object-cover"
-            />
-          </button>
-        </div>
       </div>
 
       <div className="px-4 mb-3">
-        <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
-          <Search size={13} className="text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Search groups</span>
-        </div>
+        <BaseSearchBar
+          value={groupSearchQuery}
+          onValueChange={setGroupSearchQuery}
+          onDebouncedQueryChange={setDebouncedGroupSearchQuery}
+          placeholder="Search groups"
+          ariaLabel="Search groups"
+          iconSize={17}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-minimal px-4">
-        {groupChats.map((chat) => (
+        {groupChats.length === 0 && (
+          <div className="flex h-full items-center justify-center text-center">
+            <p className="max-w-[240px] text-sm leading-relaxed text-muted-foreground">
+              Join an activity to start a group chat.
+            </p>
+          </div>
+        )}
+        {groupChats.length > 0 && filteredGroupChats.length === 0 && (
+          <div className="flex h-full items-center justify-center text-center">
+            <p className="max-w-[240px] text-sm leading-relaxed text-muted-foreground">
+              No groups match your search.
+            </p>
+          </div>
+        )}
+        {filteredGroupChats.map((chat) => (
           <button
             key={chat.id}
             onClick={() => openGroup(chat.id)}
@@ -56,30 +79,26 @@ export function ChatPage() {
                 <p className="text-[13px] font-semibold text-foreground truncate pr-2">
                   {chat.name}
                 </p>
-                <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                  {chat.time}
-                </span>
+                {chat.time && (
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                    {chat.time}
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-1 mt-0.5">
+              <div className="mt-0.5 flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">
                   {chat.members} members
                 </span>
-                <span className="text-muted-foreground opacity-40">/</span>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {chat.lastMessage}
-                </p>
+                {chat.lastMessage && (
+                  <>
+                    <span className="text-muted-foreground opacity-40">/</span>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {chat.lastMessage}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
-            {chat.unread > 0 && (
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-1"
-                style={{ backgroundColor: "#c9993a" }}
-              >
-                <span className="text-[9px] font-bold text-black">
-                  {chat.unread}
-                </span>
-              </div>
-            )}
           </button>
         ))}
         <div className="h-4" />

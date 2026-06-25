@@ -8,10 +8,14 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import { useState } from "react";
+import { ActivityCategoryIndicators } from "../components/ActivityCategoryIndicators";
 import { FriendAvatars } from "../components/FriendAvatars";
 import {
-  activityTypeColor,
-  activityTypeIcon,
+  categoriesForActivity,
+  categoryIcon,
+  primaryActivityCategory,
+  vitaCategoryColor,
 } from "../lib/activityPresentation";
 import type { Activity, PremiumActivity } from "../lib/types";
 import { useAppState } from "../state";
@@ -34,12 +38,16 @@ function getActivityById(
 export function ActivityDetailPage() {
   const {
     closeActivity,
+    joinActivity,
     likedActivityIds,
     premiumActivities,
+    profile,
     selectedActivityId,
     standardActivities,
     toggleActivityLike,
   } = useAppState();
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
   const activities: Activity[] = [...premiumActivities, ...standardActivities];
   const activity = getActivityById(activities, selectedActivityId);
 
@@ -49,6 +57,25 @@ export function ActivityDetailPage() {
 
   const liked = Boolean(likedActivityIds[activity.id]);
   const isPremium = isPremiumActivity(activity);
+  const categories = categoriesForActivity(activity.categories);
+  const primaryCategory = primaryActivityCategory(activity.categories);
+  const primaryColor = vitaCategoryColor[primaryCategory];
+  const joined = activity.joiningFriends.some(
+    (friend) => friend.handle === profile.handle,
+  );
+
+  const handleJoinActivity = async () => {
+    setJoinError(null);
+    setIsJoining(true);
+
+    try {
+      await joinActivity(activity.id);
+    } catch (error) {
+      setJoinError(error instanceof Error ? error.message : "Unable to join.");
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -81,7 +108,7 @@ export function ActivityDetailPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 backdrop-blur-sm">
-              <Star size={10} fill="#c9993a" stroke="none" />
+              <Star size={10} fill="var(--brand-yellow)" stroke="none" />
               <span className="text-[10px] font-bold text-accent">Premium</span>
             </div>
           </div>
@@ -90,11 +117,11 @@ export function ActivityDetailPage() {
             <div
               className="flex h-16 w-16 items-center justify-center rounded-2xl"
               style={{
-                backgroundColor: `${activityTypeColor[activity.type]}22`,
-                color: activityTypeColor[activity.type],
+                backgroundColor: `${primaryColor}22`,
+                color: primaryColor,
               }}
             >
-              {activityTypeIcon(activity.type, 30)}
+              {categoryIcon(primaryCategory, 30)}
             </div>
           </div>
         )}
@@ -108,6 +135,13 @@ export function ActivityDetailPage() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Hosted by {activity.host}
               </p>
+              <div className="mt-2">
+                <ActivityCategoryIndicators
+                  categories={categories}
+                  durationMinutes={activity.durationMinutes}
+                  variant="pills"
+                />
+              </div>
             </div>
             <button
               onClick={() => toggleActivityLike(activity.id)}
@@ -116,8 +150,10 @@ export function ActivityDetailPage() {
             >
               <Heart
                 size={17}
-                fill={liked ? "#f87171" : "none"}
-                stroke={liked ? "#f87171" : "#8a8880"}
+                fill={liked ? "var(--brand-pink)" : "none"}
+                stroke={
+                  liked ? "var(--brand-pink)" : "var(--muted-foreground)"
+                }
               />
             </button>
           </div>
@@ -162,7 +198,7 @@ export function ActivityDetailPage() {
                 <FriendAvatars friends={activity.joiningFriends} max={5} />
               </div>
               <div className="flex items-center gap-1">
-                <Star size={12} fill="#c9993a" stroke="none" />
+                <Star size={12} fill="var(--brand-yellow)" stroke="none" />
                 <span className="text-sm font-bold text-foreground">
                   {activity.rating}
                 </span>
@@ -177,8 +213,17 @@ export function ActivityDetailPage() {
       </div>
 
       <div className="border-t border-border bg-background px-4 py-3">
-        <button className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground active:scale-[0.99] transition-transform">
-          Join activity
+        {joinError && (
+          <p className="mb-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+            {joinError}
+          </p>
+        )}
+        <button
+          onClick={handleJoinActivity}
+          disabled={isJoining}
+          className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground active:scale-[0.99] transition-transform disabled:opacity-70"
+        >
+          {isJoining ? "Joining..." : joined ? "Open group chat" : "Join activity"}
         </button>
       </div>
     </div>
