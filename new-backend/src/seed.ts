@@ -1,7 +1,10 @@
 import "./env.js";
 import mongoose, { Types } from "mongoose";
+import { createAvatarUrl, createPasswordRecord } from "./auth.js";
 import { connectDB, disconnectDB } from "./db.js";
 import {
+  feedComments,
+  feedLikes,
   feedPosts,
   friends,
   groupChats,
@@ -16,11 +19,13 @@ import {
   ActivityModel,
   ChatMessageModel,
   ChatModel,
+  CommentModel,
   FeedPostModel,
   FriendshipModel,
+  LikeModel,
   MapPinModel,
   UserModel,
-} from "./models/MockupData.js";
+} from "./models/VitaData.js";
 import type { ActivitySeed, PremiumActivitySeed } from "./data.js";
 
 const legacyCollections = [
@@ -32,9 +37,45 @@ const legacyCollections = [
 ];
 
 const allActivities: ActivitySeed[] = [...premiumActivities, ...standardActivities];
+const testUserSeed = {
+  mockId: 9,
+  name: "test",
+  handle: "@test",
+  email: "test@gmail.com",
+  password: "12345678",
+  friendMockIds: [1, 2, 3, 7],
+  chatMockIds: [1, 2, 3, 8],
+  adminChatMockId: 1,
+  joinedActivityMockIds: [1, 3, 4, 8],
+};
+const activityChatByTitle = new Map<string, number>([
+  ["Tai Chi at Fort Canning", 1],
+  ["Hawker Heritage Food Walk", 5],
+  ["Botanic Gardens Photography", 3],
+  ["Morning Walk - East Coast Park", 2],
+  ["Senior Chess Club", 6],
+  ["Cantonese Cooking Class", 4],
+  ["Kelong Fishing Day Trip", 7],
+  ["Book Club - Cafe Meeting", 8],
+]);
 
 function slugEmail(handle: string) {
   return `${handle.replace(/^@/, "")}@vita.local`;
+}
+
+function seedHandle(name: string) {
+  return `@${name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 24)}`;
+}
+
+function requireSeedValue<T>(value: T | null | undefined, description: string) {
+  if (!value) {
+    throw new Error(`Seed data is missing ${description}.`);
+  }
+
+  return value;
 }
 
 function isPremiumActivity(
@@ -89,6 +130,8 @@ async function seed() {
       ActivityJoinModel.deleteMany(),
       MapPinModel.deleteMany(),
       FeedPostModel.deleteMany(),
+      CommentModel.deleteMany(),
+      LikeModel.deleteMany(),
     ]);
 
     const linda = await UserModel.create({
@@ -106,6 +149,8 @@ async function seed() {
     const userByHandle = new Map<string, Types.ObjectId>([
       [profile.handle, linda._id],
     ]);
+    let nextSeedUserMockId =
+      Math.max(testUserSeed.mockId, ...friends.map((friend) => friend.id)) + 1;
 
     for (const friend of friends) {
       const existingUserId = userByHandle.get(friend.handle);
@@ -129,12 +174,53 @@ async function seed() {
       userByHandle.set(friend.handle, user._id);
     }
 
-    for (const friend of friends) {
-      const friendId = userByMockId.get(friend.id);
-
-      if (!friendId) {
+    for (const hostName of new Set(
+      allActivities.map((activity) => activity.host),
+    )) {
+      if (userByName.has(hostName)) {
         continue;
       }
+
+      const handle = seedHandle(hostName);
+      const email = slugEmail(handle);
+      const user = await UserModel.create({
+        mockId: nextSeedUserMockId,
+        name: hostName,
+        handle,
+        email,
+        avatarUrl: createAvatarUrl(hostName, email),
+      });
+
+      userByMockId.set(nextSeedUserMockId, user._id);
+      userByName.set(hostName, user._id);
+      userByHandle.set(handle, user._id);
+      nextSeedUserMockId += 1;
+    }
+
+    const testUser = await UserModel.create({
+      mockId: testUserSeed.mockId,
+      name: testUserSeed.name,
+      handle: testUserSeed.handle,
+      email: testUserSeed.email,
+      avatarUrl: createAvatarUrl(testUserSeed.name, testUserSeed.email),
+      bio: "Test account for local development.",
+      stats: [
+        { value: "4", label: "Activities" },
+        { value: String(testUserSeed.friendMockIds.length), label: "Friends" },
+        { value: "0", label: "Posts" },
+      ],
+      ...createPasswordRecord(testUserSeed.password),
+    });
+
+    userByMockId.set(testUserSeed.mockId, testUser._id);
+    userByName.set(testUserSeed.name, testUser._id);
+    userByHandle.set(testUserSeed.handle, testUser._id);
+
+    for (const friend of friends) {
+      const friendId = requireSeedValue(
+        userByMockId.get(friend.id),
+        `friend user ${friend.id}`,
+      );
 
       if (String(friendId) === String(linda._id)) {
         continue;
@@ -156,29 +242,68 @@ async function seed() {
       ]);
     }
 
+    for (const friendMockId of testUserSeed.friendMockIds) {
+      const friendId = requireSeedValue(
+        userByMockId.get(friendMockId),
+        `test friend user ${friendMockId}`,
+      );
+      const friendSeed = friends.find((friend) => friend.id === friendMockId);
+
+      if (String(friendId) === String(testUser._id)) {
+        continue;
+      }
+
+      await FriendshipModel.create([
+        {
+          userId: testUser._id,
+          friendId,
+          mutual: friendSeed?.mutual ?? 0,
+          joined: friendSeed?.joined ?? [],
+        },
+        {
+          userId: friendId,
+          friendId: testUser._id,
+          mutual: friendSeed?.mutual ?? 0,
+          joined: friendSeed?.joined ?? [],
+        },
+      ]);
+    }
+
     const chatByMockId = new Map<number, Types.ObjectId>();
+    const testChatMockIds = new Set(testUserSeed.chatMockIds);
 
     for (const chat of groupChats) {
       const chatMembers = uniqueObjectIds([
         linda._id,
         ...friends
           .slice(0, 5)
-          .map((friend) => userByMockId.get(friend.id))
-          .filter((id): id is Types.ObjectId => Boolean(id)),
+          .map((friend) =>
+            requireSeedValue(
+              userByMockId.get(friend.id),
+              `chat member "${friend.name}" for chat "${chat.name}"`,
+            ),
+          ),
+        ...(testChatMockIds.has(chat.id) ? [testUser._id] : []),
       ]);
       const savedChat = await ChatModel.create({
         mockId: chat.id,
         name: chat.name,
         avatar: chat.avatar,
         members: chatMembers,
-        lastMessage: chat.lastMessage,
-        time: chat.time,
+        lastMessage: "",
+        time: "",
         unread: chat.unread,
       });
       await AdminModel.create({
         user: linda._id,
         group: savedChat._id,
       });
+      if (chat.id === testUserSeed.adminChatMockId) {
+        await AdminModel.create({
+          user: testUser._id,
+          group: savedChat._id,
+        });
+      }
 
       chatByMockId.set(chat.id, savedChat._id);
     }
@@ -186,22 +311,30 @@ async function seed() {
     const activityByMockId = new Map<number, Types.ObjectId>();
 
     for (const activity of allActivities) {
-      const matchingChat =
-        groupChats.find((chat) =>
-          chat.name.toLowerCase().includes(activity.title.toLowerCase()),
-        ) ??
-        groupChats.find((chat) =>
-          activity.title.toLowerCase().includes(chat.name.toLowerCase()),
-        ) ??
-        groupChats[0];
-      const chatId = chatByMockId.get(matchingChat.id);
-      const host =
-        userByName.get(activity.host) ??
-        userByName.get(activity.joiningFriends[0]?.name ?? "") ??
-        linda._id;
+      const chatMockId = requireSeedValue(
+        activityChatByTitle.get(activity.title),
+        `chat mapping for activity "${activity.title}"`,
+      );
+      const chatId = requireSeedValue(
+        chatByMockId.get(chatMockId),
+        `chat ${chatMockId} for activity "${activity.title}"`,
+      );
+      const host = requireSeedValue(
+        userByName.get(activity.host),
+        `host "${activity.host}" for activity "${activity.title}"`,
+      );
       const joiningFriends = activity.joiningFriends
-        .map((friend) => userByMockId.get(friend.id))
-        .filter((id): id is Types.ObjectId => Boolean(id));
+        .map((friend) =>
+          requireSeedValue(
+            userByMockId.get(friend.id),
+            `joining friend "${friend.name}" for activity "${activity.title}"`,
+          ),
+        );
+      const activityJoiningUsers = testUserSeed.joinedActivityMockIds.includes(
+        activity.id,
+      )
+        ? [...joiningFriends, testUser._id]
+        : joiningFriends;
       const savedActivity = await ActivityModel.create({
         mockId: activity.id,
         title: activity.title,
@@ -222,10 +355,12 @@ async function seed() {
 
       activityByMockId.set(activity.id, savedActivity._id);
 
-      const activityJoinRows = uniqueObjectIds(joiningFriends).map((userId) => ({
-        userId,
-        activityId: savedActivity._id,
-      }));
+      const activityJoinRows = uniqueObjectIds(activityJoiningUsers).map(
+        (userId) => ({
+          userId,
+          activityId: savedActivity._id,
+        }),
+      );
 
       if (activityJoinRows.length > 0) {
         await ActivityJoinModel.create(activityJoinRows);
@@ -233,11 +368,10 @@ async function seed() {
     }
 
     for (const pin of mapPins) {
-      const activityId = activityByMockId.get(pin.activityId);
-
-      if (!activityId) {
-        continue;
-      }
+      const activityId = requireSeedValue(
+        activityByMockId.get(pin.activityId),
+        `activity ${pin.activityId} for map pin ${pin.id}`,
+      );
 
       await MapPinModel.create({
         mockId: pin.id,
@@ -249,26 +383,88 @@ async function seed() {
       });
     }
 
+    const commentCountByPostId = new Map<number, number>();
+
+    for (const comment of feedComments) {
+      commentCountByPostId.set(
+        comment.postId,
+        (commentCountByPostId.get(comment.postId) ?? 0) + 1,
+      );
+    }
+
+    const likeCountByPostId = new Map<number, number>();
+
+    for (const like of feedLikes) {
+      likeCountByPostId.set(like.postId, like.handles.length);
+    }
+
+    const feedPostByMockId = new Map<number, Types.ObjectId>();
+
     for (const post of feedPosts) {
-      const user = userByHandle.get(post.handle) ?? linda._id;
-      const activity =
-        allActivities.find((item) => item.title === post.activity) ??
-        allActivities[0];
-      const activityId = activityByMockId.get(activity.id);
+      const user = requireSeedValue(
+        userByHandle.get(post.handle),
+        `user ${post.handle} for feed post ${post.id}`,
+      );
+      const activity = requireSeedValue(
+        allActivities.find((item) => item.title === post.activity),
+        `activity "${post.activity}" for feed post ${post.id}`,
+      );
+      const activityId = requireSeedValue(
+        activityByMockId.get(activity.id),
+        `activity ${activity.id} for feed post ${post.id}`,
+      );
 
-      if (!activityId) {
-        continue;
-      }
-
-      await FeedPostModel.create({
+      const savedPost = await FeedPostModel.create({
         mockId: post.id,
         user,
         activity: activityId,
         time: post.time,
         caption: post.caption,
         image: post.image,
-        likes: post.likes,
-        comments: post.comments,
+        likes: likeCountByPostId.get(post.id) ?? 0,
+        likesCount: likeCountByPostId.get(post.id) ?? 0,
+        comments: commentCountByPostId.get(post.id) ?? 0,
+      });
+
+      feedPostByMockId.set(post.id, savedPost._id);
+    }
+
+    for (const like of feedLikes) {
+      const post = requireSeedValue(
+        feedPostByMockId.get(like.postId),
+        `feed post ${like.postId} for like`,
+      );
+
+      for (const handle of like.handles) {
+        const user = requireSeedValue(
+          userByHandle.get(handle),
+          `user ${handle} for like on feed post ${like.postId}`,
+        );
+
+        await LikeModel.create({
+          post,
+          user,
+        });
+      }
+    }
+
+    for (const comment of feedComments) {
+      const post = requireSeedValue(
+        feedPostByMockId.get(comment.postId),
+        `feed post ${comment.postId} for comment`,
+      );
+      const user = requireSeedValue(
+        userByHandle.get(comment.handle),
+        `user ${comment.handle} for comment on feed post ${comment.postId}`,
+      );
+      const createdAt = new Date(Date.now() - comment.minutesAgo * 60_000);
+
+      await CommentModel.create({
+        post,
+        user,
+        body: comment.body,
+        createdAt,
+        updatedAt: createdAt,
       });
     }
 

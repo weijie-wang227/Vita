@@ -1,7 +1,7 @@
 import "./env.js";
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
-import { connectDB } from "./db.js";
+import { connectDB, getMongoConnectionStatus } from "./db.js";
 import { router } from "./routes/index.js";
 
 const app = express();
@@ -12,7 +12,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 };
 
 app.use(cors());
-app.use(express.json({ limit: "6mb" }));
+app.use(express.json());
 app.use("/api", router);
 app.use(errorHandler);
 
@@ -20,11 +20,15 @@ async function startServer() {
   try {
     await connectDB();
   } catch (error) {
-    console.error("Failed to connect to MongoDB; serving fallback data.", error);
+    console.error("Failed to connect to MongoDB; API routes will return 503.", error);
   }
 
   app.listen(port, () => {
-    console.log(`Mobile Activity mockup backend running on http://localhost:${port}`);
+    const mongo = getMongoConnectionStatus();
+
+    console.log(
+      `Vita backend running on http://localhost:${port} (MongoDB: ${mongo.state})`,
+    );
   });
 }
 

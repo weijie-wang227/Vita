@@ -6,13 +6,18 @@ import {
   ActivityModel,
   ChatMessageModel,
   ChatModel,
-} from "../models/MockupData.js";
+} from "../models/VitaData.js";
+import { getChatPreview, getLatestChatPreviews } from "../chatPreviews.js";
 import { serializeChat, serializeChatMessage } from "../serializers.js";
 
 const router = Router();
 
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function asObject(doc: Record<string, any>) {
+  return typeof doc.toObject === "function" ? doc.toObject() : doc;
 }
 
 function formatPreviewTime(value: Date) {
@@ -38,6 +43,90 @@ async function findAdminUserIds(groupId: unknown) {
   );
 }
 
+async function findAdminUserIdsByGroup(
+  groups: Record<string, any>[],
+) {
+  const groupIds = groups
+    .map((group) => asObject(group)._id)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
+  if (groupIds.length === 0) {
+    return new Map<string, Set<string>>();
+  }
+
+  const admins = await AdminModel.find({ group: { $in: groupIds } }).select(
+    "group user",
+  );
+  const adminUserIdsByGroup = new Map<string, Set<string>>();
+
+  for (const admin of admins) {
+    const item = asObject(admin);
+    const groupId = String(item.group?._id ?? item.group);
+    const userId = String(item.user?._id ?? item.user);
+    const adminUserIds = adminUserIdsByGroup.get(groupId) ?? new Set<string>();
+
+    adminUserIds.add(userId);
+    adminUserIdsByGroup.set(groupId, adminUserIds);
+  }
+
+  return adminUserIdsByGroup;
+}
+
+async function findAdminGroupIds(userId: unknown, groups: Record<string, any>[]) {
+  const groupIds = groups
+    .map((group) => asObject(group)._id)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
+  if (groupIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const admins = await AdminModel.find({
+    user: userId,
+    group: { $in: groupIds },
+  }).select("group");
+
+  return new Set(
+    admins.map((admin: Record<string, any>) =>
+      String(admin.group?._id ?? admin.group),
+    ),
+  );
+}
+
+async function isGroupAdmin(userId: unknown, groupId: unknown) {
+  const admin = await AdminModel.findOne({ user: userId, group: groupId }).select(
+    "_id",
+  );
+
+  return Boolean(admin);
+}
+
+async function getJoiningUsersByActivityId(activities: Record<string, any>[]) {
+  const activityIds = activities
+    .map((activity) => asObject(activity)._id)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
+  if (activityIds.length === 0) {
+    return new Map<string, Record<string, any>[]>();
+  }
+
+  const joins = await ActivityJoinModel.find({ activityId: { $in: activityIds } })
+    .populate("userId")
+    .sort({ createdAt: 1 });
+  const usersByActivityId = new Map<string, Record<string, any>[]>();
+
+  for (const join of joins) {
+    const item = asObject(join);
+    const activityId = String(item.activityId?._id ?? item.activityId);
+    const users = usersByActivityId.get(activityId) ?? [];
+
+    users.push(item.userId);
+    usersByActivityId.set(activityId, users);
+  }
+
+  return usersByActivityId;
+}
+
 router.get("/", async (req, res, next) => {
   try {
     const user = await findAuthenticatedUser(req.headers.authorization);
@@ -50,8 +139,22 @@ router.get("/", async (req, res, next) => {
     const groups = await ChatModel.find({ members: user._id })
       .populate("members")
       .sort({ updatedAt: -1, mockId: 1 });
+    const previews = await getLatestChatPreviews(groups);
+    const adminGroupIds = await findAdminGroupIds(user._id, groups);
+    const adminUserIdsByGroup = await findAdminUserIdsByGroup(groups);
 
-    res.json(groups.map(serializeChat));
+    res.json(
+      groups.map((group) => {
+        const groupObjectId = String(asObject(group)._id);
+
+        return serializeChat(
+          group,
+          getChatPreview(previews, group),
+          adminGroupIds.has(groupObjectId),
+          adminUserIdsByGroup.get(groupObjectId),
+        );
+      }),
+    );
   } catch (error) {
     next(error);
   }
@@ -74,7 +177,18 @@ router.get("/:id", async (req, res, next) => {
       return;
     }
 
-    res.json(serializeChat(group));
+    const previews = await getLatestChatPreviews([group]);
+    const isAdmin = await isGroupAdmin(user._id, group._id);
+    const adminUserIds = await findAdminUserIds(group._id);
+
+    res.json(
+      serializeChat(
+        group,
+        getChatPreview(previews, group),
+        isAdmin,
+        adminUserIds,
+      ),
+    );
   } catch (error) {
     next(error);
   }
@@ -118,7 +232,18 @@ router.post("/:id/join", async (req, res, next) => {
       );
     }
 
-    res.json({ group: serializeChat(updatedGroup) });
+    const previews = await getLatestChatPreviews([updatedGroup]);
+    const isAdmin = await isGroupAdmin(user._id, updatedGroup._id);
+    const adminUserIds = await findAdminUserIds(updatedGroup._id);
+
+    res.json({
+      group: serializeChat(
+        updatedGroup,
+        getChatPreview(previews, updatedGroup),
+        isAdmin,
+        adminUserIds,
+      ),
+    });
   } catch (error) {
     next(error);
   }
@@ -144,12 +269,23 @@ router.get("/:id/messages", async (req, res, next) => {
     const messages = await ChatMessageModel.find({ chat: group._id })
       .populate("chat")
       .populate("sender")
+      .populate("activity")
       .sort({ createdAt: 1, _id: 1 })
       .limit(200);
     const adminUserIds = await findAdminUserIds(group._id);
+    const inviteActivities = messages
+      .map((message) => asObject(message).activity)
+      .filter(
+        (activity): activity is Record<string, any> =>
+          Boolean(activity && asObject(activity)._id),
+      );
+    const joiningUsersByActivityId =
+      await getJoiningUsersByActivityId(inviteActivities);
 
     res.json(
-      messages.map((message) => serializeChatMessage(message, adminUserIds)),
+      messages.map((message) =>
+        serializeChatMessage(message, adminUserIds, joiningUsersByActivityId),
+      ),
     );
   } catch (error) {
     next(error);
@@ -204,6 +340,7 @@ router.post("/:id/messages", async (req, res, next) => {
       .populate("chat")
       .populate("sender");
     const adminUserIds = await findAdminUserIds(group._id);
+    const isAdmin = await isGroupAdmin(user._id, group._id);
 
     if (!updatedGroup || !savedMessage) {
       res.status(404).json({ message: "Group not found" });
@@ -212,7 +349,7 @@ router.post("/:id/messages", async (req, res, next) => {
 
     res.status(201).json({
       message: serializeChatMessage(savedMessage, adminUserIds),
-      group: serializeChat(updatedGroup),
+      group: serializeChat(updatedGroup, undefined, isAdmin, adminUserIds),
     });
   } catch (error) {
     next(error);

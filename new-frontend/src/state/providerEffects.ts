@@ -58,7 +58,8 @@ export function useRestoreSession({
         setAuthUser(user);
         setProfile(user);
         setAuthError(null);
-      } catch {
+      } catch (error) {
+        console.error("Unable to restore session", error);
         clearAuthToken();
 
         if (!ignore) {
@@ -159,6 +160,7 @@ export function useLoadAppData({
         setApiError(null);
       } catch (error) {
         if (!ignore) {
+          console.error("Unable to load app data", error);
           setApiError(error instanceof Error ? error.message : "API unavailable");
         }
       } finally {

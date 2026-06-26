@@ -12,6 +12,14 @@ import {
   X,
 } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { uploadImageToR2 } from "../api/uploads";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "../app/components/ui/sheet";
 import { ActivityCategoryIndicators } from "../components/ActivityCategoryIndicators";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 import type { FeedPostGroupReference } from "../lib/types";
@@ -31,10 +39,13 @@ function readFileAsDataUrl(file: File) {
 
 export function FeedPage() {
   const {
+    createFeedComment,
     createFeedPost,
+    feedComments,
     feedPosts,
     groupChats,
     joinGroup,
+    loadFeedComments,
     likedPostIds,
     openGroup,
     profile,
@@ -44,7 +55,8 @@ export function FeedPage() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [caption, setCaption] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [imageName, setImageName] = useState("");
   const [composerError, setComposerError] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
@@ -52,11 +64,27 @@ export function FeedPage() {
     useState<FeedPostGroupReference | null>(null);
   const [joinPromptError, setJoinPromptError] = useState<string | null>(null);
   const [joiningGroupId, setJoiningGroupId] = useState<number | null>(null);
+  const [commentPostId, setCommentPostId] = useState<number | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [likingPostIds, setLikingPostIds] = useState<Record<number, boolean>>(
+    {},
+  );
+  const [likeError, setLikeError] = useState<string | null>(null);
+  const selectedCommentPost =
+    commentPostId === null
+      ? null
+      : feedPosts.find((post) => post.id === commentPostId) ?? null;
+  const selectedPostComments =
+    commentPostId === null ? [] : feedComments[commentPostId] ?? [];
 
   const resetComposer = () => {
     setCaption("");
     setSelectedGroupId("");
-    setImageDataUrl("");
+    setImageFile(null);
+    setImagePreviewUrl("");
     setImageName("");
     setComposerError(null);
 
@@ -89,7 +117,8 @@ export function FeedPage() {
     try {
       const dataUrl = await readFileAsDataUrl(file);
 
-      setImageDataUrl(dataUrl);
+      setImageFile(file);
+      setImagePreviewUrl(dataUrl);
       setImageName(file.name);
     } catch (error) {
       setComposerError(
@@ -99,7 +128,8 @@ export function FeedPage() {
   };
 
   const handleRemoveImage = () => {
-    setImageDataUrl("");
+    setImageFile(null);
+    setImagePreviewUrl("");
     setImageName("");
 
     if (imageInputRef.current) {
@@ -120,9 +150,13 @@ export function FeedPage() {
     setIsPosting(true);
 
     try {
+      const uploadedImageUrl = imageFile
+        ? await uploadImageToR2(imageFile, "posts")
+        : undefined;
+
       await createFeedPost({
         caption: trimmedCaption,
-        image: imageDataUrl || undefined,
+        image: uploadedImageUrl,
         groupId: selectedGroupId ? Number(selectedGroupId) : undefined,
       });
       resetComposer();
@@ -168,6 +202,83 @@ export function FeedPage() {
     }
   };
 
+  const handleOpenComments = async (postId: number) => {
+    setCommentPostId(postId);
+    setCommentDraft("");
+    setCommentsError(null);
+    setIsLoadingComments(true);
+
+    try {
+      await loadFeedComments(postId);
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : "Unable to load comments.",
+      );
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const handleCommentSheetChange = (open: boolean) => {
+    if (open) {
+      return;
+    }
+
+    setCommentPostId(null);
+    setCommentDraft("");
+    setCommentsError(null);
+    setIsLoadingComments(false);
+    setIsPostingComment(false);
+  };
+
+  const handleCreateComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (commentPostId === null) {
+      return;
+    }
+
+    const body = commentDraft.trim();
+
+    if (!body) {
+      setCommentsError("Write a comment before sending.");
+      return;
+    }
+
+    setCommentsError(null);
+    setIsPostingComment(true);
+
+    try {
+      await createFeedComment(commentPostId, { body });
+      setCommentDraft("");
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : "Unable to add comment.",
+      );
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
+  const handleTogglePostLike = async (postId: number) => {
+    setLikingPostIds((current) => ({ ...current, [postId]: true }));
+    setLikeError(null);
+
+    try {
+      await togglePostLike(postId);
+    } catch (error) {
+      setLikeError(
+        error instanceof Error ? error.message : "Unable to update like.",
+      );
+    } finally {
+      setLikingPostIds((current) => {
+        const { [postId]: _postId, ...next } = current;
+
+        return next;
+      });
+    }
+  };
+
   return (
     <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
@@ -180,6 +291,12 @@ export function FeedPage() {
           <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
         </button>
       </div>
+
+      {likeError && (
+        <p className="mx-4 mb-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+          {likeError}
+        </p>
+      )}
 
       {isComposerOpen && (
         <div className="px-4 pb-3">
@@ -202,10 +319,10 @@ export function FeedPage() {
               />
             </div>
 
-            {imageDataUrl && (
+            {imagePreviewUrl && (
               <div className="relative mt-3 overflow-hidden rounded-xl bg-secondary">
                 <img
-                  src={imageDataUrl}
+                  src={imagePreviewUrl}
                   alt=""
                   className="max-h-64 w-full object-cover"
                 />
@@ -293,7 +410,8 @@ export function FeedPage() {
 
       <div className="flex-1 overflow-y-auto scrollbar-minimal">
         {feedPosts.map((post) => {
-          const liked = Boolean(likedPostIds[post.id]);
+          const liked = Boolean(likedPostIds[post.id] ?? post.likedByMe);
+          const isLiking = Boolean(likingPostIds[post.id]);
           const contextLabel = post.group?.name ?? post.activity;
           const hasCategorySummary =
             post.categories.length > 0 && post.durationMinutes !== undefined;
@@ -390,7 +508,8 @@ export function FeedPage() {
 
                 <div className="mt-3 flex items-center gap-4">
                   <button
-                    onClick={() => togglePostLike(post.id)}
+                    onClick={() => handleTogglePostLike(post.id)}
+                    disabled={isLiking}
                     className="flex items-center gap-1.5"
                     aria-label={liked ? "Unlike post" : "Like post"}
                   >
@@ -403,10 +522,14 @@ export function FeedPage() {
                       strokeWidth={1.5}
                     />
                     <span className="text-xs text-muted-foreground">
-                      {post.likes + (liked ? 1 : 0)}
+                      {post.likesCount ?? post.likes}
                     </span>
                   </button>
-                  <button className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleOpenComments(post.id)}
+                    className="flex items-center gap-1.5"
+                    aria-label={`Open comments for ${post.user}'s post`}
+                  >
                     <MessageCircle
                       size={19}
                       stroke="var(--muted-foreground)"
@@ -445,6 +568,113 @@ export function FeedPage() {
           <Plus size={22} color="var(--accent-foreground)" strokeWidth={2.5} />
         )}
       </FloatingActionButton>
+
+      <Sheet
+        open={commentPostId !== null}
+        onOpenChange={handleCommentSheetChange}
+      >
+        <SheetContent
+          side="bottom"
+          className="max-h-[86vh] gap-0 rounded-t-3xl border-border p-0 sm:mx-auto sm:max-w-md"
+        >
+          <SheetHeader className="border-b border-border px-4 pb-3 pr-12 pt-5 text-left">
+            <SheetTitle className="truncate text-base">
+              {selectedCommentPost
+                ? `${selectedCommentPost.user}'s post`
+                : "Comments"}
+            </SheetTitle>
+            <SheetDescription>
+              {selectedCommentPost
+                ? `${selectedCommentPost.comments} comments`
+                : "Post comments"}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-[220px] flex-1 overflow-y-auto px-4 py-3 scrollbar-minimal">
+            {isLoadingComments ? (
+              <div className="flex min-h-[180px] items-center justify-center">
+                <Loader2 size={18} className="animate-spin text-muted-foreground" />
+              </div>
+            ) : selectedPostComments.length > 0 ? (
+              <div className="space-y-3">
+                {selectedPostComments.map((comment) => (
+                  <div key={comment.id} className="flex gap-2.5">
+                    <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
+                      {comment.avatar ? (
+                        <img
+                          src={comment.avatar}
+                          alt={comment.user}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-muted-foreground">
+                          {comment.user[0] ?? "?"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-xs font-bold text-foreground">
+                          {comment.user}
+                        </p>
+                        <span className="flex-shrink-0 text-[10px] text-muted-foreground">
+                          {comment.time}
+                        </span>
+                      </div>
+                      <p className="mt-1 break-words text-[12px] leading-relaxed text-foreground">
+                        {comment.body}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex min-h-[180px] items-center justify-center text-center">
+                <p className="max-w-[220px] text-sm leading-relaxed text-muted-foreground">
+                  No comments yet.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-border bg-background px-4 py-3">
+            {commentsError && (
+              <p className="mb-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                {commentsError}
+              </p>
+            )}
+            <form
+              onSubmit={handleCreateComment}
+              className="flex items-end gap-2 rounded-2xl bg-secondary px-3 py-2"
+            >
+              <img
+                src={profile.avatar}
+                alt=""
+                className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
+              />
+              <textarea
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                className="max-h-24 min-h-8 min-w-0 flex-1 resize-none bg-transparent py-1 text-sm leading-snug text-foreground outline-none placeholder:text-muted-foreground"
+                placeholder="Add a comment"
+                maxLength={500}
+              />
+              <button
+                type="submit"
+                disabled={!commentDraft.trim() || isPostingComment}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground disabled:opacity-60"
+                aria-label="Send comment"
+              >
+                {isPostingComment ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
+              </button>
+            </form>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {joinPromptGroup && (
         <div className="absolute inset-0 z-50 flex items-end bg-background/70 p-4 backdrop-blur-sm">

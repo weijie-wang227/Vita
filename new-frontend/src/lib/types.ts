@@ -44,6 +44,7 @@ export type CreateActivityInput = {
   spots: number;
   price: string;
   categories: VitaCategory[];
+  groupId?: number;
 };
 
 export type CreateActivityResponse = {
@@ -61,11 +62,24 @@ export type FeedPost = {
   caption: string;
   image?: string;
   likes: number;
+  likesCount: number;
+  likedByMe: boolean;
   comments: number;
   activity?: string;
   durationMinutes?: number;
   categories: VitaCategory[];
   group?: FeedPostGroupReference;
+};
+
+export type FeedComment = {
+  id: string;
+  postId: number;
+  user: string;
+  handle: string;
+  avatar: string;
+  body: string;
+  time: string;
+  createdAt: string;
 };
 
 export type FeedPostGroupReference = {
@@ -75,25 +89,71 @@ export type FeedPostGroupReference = {
   members: number;
 };
 
+export type GroupMember = {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  isAdmin: boolean;
+};
+
 export type CreateFeedPostInput = {
   caption: string;
   image?: string;
   groupId?: number;
 };
 
+export type CreateFeedCommentInput = {
+  body: string;
+};
+
+export type FeedCommentsResponse = {
+  comments: FeedComment[];
+  commentCount: number;
+};
+
+export type CreateFeedCommentResponse = {
+  comment: FeedComment;
+  commentCount: number;
+};
+
+export type FeedLikeResponse = {
+  postId: number;
+  likes: number;
+  likesCount: number;
+  likedByMe: boolean;
+};
+
 export type GroupChat = {
   id: number;
   name: string;
   members: number;
+  memberList?: GroupMember[];
   avatar: string;
   lastMessage: string;
   time: string;
   unread: number;
+  isAdmin: boolean;
+};
+
+export type ChatActivityInvite = {
+  activity: {
+    id: number;
+    title: string;
+    date: string;
+    time: string;
+    location: string;
+    durationMinutes: number;
+    price: string;
+    categories: VitaCategory[];
+  };
+  joiningFriends: Friend[];
 };
 
 export type ChatMessage = {
   id: string;
   groupId: number;
+  type: "text" | "activity_invite";
   sender: {
     id: string;
     name: string;
@@ -104,6 +164,7 @@ export type ChatMessage = {
   body: string;
   time: string;
   createdAt: string;
+  activityInvite?: ChatActivityInvite;
 };
 
 export type JoinActivityResponse = {

@@ -14,6 +14,7 @@ export type CreateActivityFormState = {
   spots: string;
   priceCredits: string;
   categories: VitaCategory[];
+  linkedGroupId: string;
 };
 
 export type PhotonFeature = {
@@ -56,4 +57,5 @@ export const initialFormState: CreateActivityFormState = {
   spots: "8",
   priceCredits: "0",
   categories: ["social"],
+  linkedGroupId: "",
 };

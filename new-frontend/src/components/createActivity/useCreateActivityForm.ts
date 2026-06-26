@@ -14,7 +14,8 @@ export function useCreateActivityForm({
   open,
   onClose,
 }: CreateActivityModalProps) {
-  const { createActivity, openActivity } = useAppState();
+  const { createActivity, groupChats, openActivity } = useAppState();
+  const adminGroups = groupChats.filter((group) => group.isAdmin);
   const [form, setForm] = useState<CreateActivityFormState>(initialFormState);
   const [selectedPosition, setSelectedPosition] = useState<[number, number] | null>(
     null,
@@ -183,6 +184,7 @@ export function useCreateActivityForm({
       spots,
       price: `${credits} credits`,
       categories: form.categories,
+      groupId: form.linkedGroupId ? Number(form.linkedGroupId) : undefined,
     };
 
     try {
@@ -203,6 +205,7 @@ export function useCreateActivityForm({
     clearLocationQuery,
     error,
     form,
+    adminGroups,
     handleClose,
     handleSubmit,
     isSaving,

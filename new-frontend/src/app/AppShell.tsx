@@ -1,17 +1,28 @@
 import { useState } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import type { VitaLogoLevels } from "../components/VitaProgressLogo";
-import { useAppState } from "../state";
+import {
+  ActivitiesPage,
+  ActivityDetailPage,
+  ChatPage,
+  FeedPage,
+  GroupDetailPage,
+  ProfilePage,
+  SettingsPage,
+} from "../pages";
 import { BottomNavigation } from "./BottomNavigation";
-import { CurrentPage } from "./CurrentPage";
 import { emptyLogoLevels, logoPortionOrder } from "./logoState";
 import { VitaLogoOverlay } from "./VitaLogoOverlay";
 
 export function AppShell() {
-  const { selectedActivityId, selectedGroupId } = useAppState();
+  const location = useLocation();
   const [logoLevels, setLogoLevels] = useState<VitaLogoLevels>(emptyLogoLevels);
   const [isLogoExpanded, setIsLogoExpanded] = useState(false);
   const [nextPortionIndex, setNextPortionIndex] = useState(0);
-  const hasFullScreenView = selectedActivityId !== null || selectedGroupId !== null;
+  const hasFullScreenView =
+    /^\/activities\/[^/]+$/.test(location.pathname) ||
+    /^\/groups\/[^/]+$/.test(location.pathname) ||
+    location.pathname === "/settings";
 
   const advanceLogoFill = () => {
     const portion = logoPortionOrder[nextPortionIndex];
@@ -39,7 +50,17 @@ export function AppShell() {
             hasFullScreenView ? "bottom-0" : "bottom-20"
           }`}
         >
-          <CurrentPage />
+          <Routes>
+            <Route path="/" element={<Navigate to="/activities" replace />} />
+            <Route path="/activities" element={<ActivitiesPage />} />
+            <Route path="/activities/:activityId" element={<ActivityDetailPage />} />
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/groups" element={<ChatPage />} />
+            <Route path="/groups/:groupId" element={<GroupDetailPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/activities" replace />} />
+          </Routes>
         </div>
 
         {!hasFullScreenView && isLogoExpanded && (

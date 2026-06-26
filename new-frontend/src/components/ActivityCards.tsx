@@ -92,12 +92,14 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
               {activity.date} / {activity.time}
             </span>
           </div>
+          {/*
           <div className="flex items-center gap-0.5">
             <Star size={9} fill="var(--brand-yellow)" stroke="none" />
             <span className="text-[10px] text-foreground font-medium">
               {activity.rating}
             </span>
           </div>
+          */}
         </div>
         <div className="flex gap-1 mb-1">
           {activity.tags.map((tag) => (
@@ -162,12 +164,14 @@ export function StandardRow({ activity }: { activity: Activity }) {
             />
           </div>
         </div>
+        {/*
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Star size={9} fill="var(--brand-yellow)" stroke="none" />
           <span className="text-[10px] text-muted-foreground">
             {activity.rating}
           </span>
         </div>
+        */}
       </div>
       <div style={{ paddingLeft: 52 }}>
         <FriendAvatars friends={activity.joiningFriends} max={4} />

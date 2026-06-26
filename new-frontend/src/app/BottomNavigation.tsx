@@ -5,34 +5,39 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
 import { VitaProgressLogo, type VitaLogoLevels } from "../components/VitaProgressLogo";
-import { useAppState, type AppTab } from "../state";
+import type { AppTab } from "../state";
 
 type NavItem = {
   id: AppTab;
   label: string;
   Icon: LucideIcon;
+  path: string;
 };
 
 const navItems: NavItem[] = [
-  { id: "activities", label: "Activities", Icon: Mountain },
-  { id: "feed", label: "Feed", Icon: Camera },
-  { id: "chat", label: "Groups", Icon: MessageCircle },
-  { id: "profile", label: "Profile", Icon: UserRound },
+  { id: "activities", label: "Activities", Icon: Mountain, path: "/activities" },
+  { id: "feed", label: "Feed", Icon: Camera, path: "/feed" },
+  { id: "chat", label: "Groups", Icon: MessageCircle, path: "/groups" },
+  { id: "profile", label: "Profile", Icon: UserRound, path: "/profile" },
 ];
 
 const leftNavItems = navItems.slice(0, 2);
 const rightNavItems = navItems.slice(2);
 
 function NavButton({ item }: { item: NavItem }) {
-  const { activeTab, selectTab } = useAppState();
-  const active = activeTab === item.id;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const active =
+    location.pathname === item.path ||
+    (item.path !== "/activities" && location.pathname.startsWith(`${item.path}/`));
   const color = active ? "var(--accent)" : "var(--muted-foreground)";
 
   return (
     <button
       type="button"
-      onClick={() => selectTab(item.id)}
+      onClick={() => navigate(item.path)}
       className="flex-1 flex flex-col items-center gap-1 pt-1 active:scale-90 transition-transform"
     >
       <div className="relative">
@@ -57,9 +62,13 @@ export function BottomNavigation({
   levels: VitaLogoLevels;
   onLogoClick: () => void;
 }) {
-  const { selectedActivityId, selectedGroupId } = useAppState();
+  const location = useLocation();
+  const hasFullScreenView =
+    /^\/activities\/[^/]+$/.test(location.pathname) ||
+    /^\/groups\/[^/]+$/.test(location.pathname) ||
+    location.pathname === "/settings";
 
-  if (selectedActivityId !== null || selectedGroupId !== null) {
+  if (hasFullScreenView) {
     return null;
   }
 

@@ -1,20 +1,41 @@
 import { Router } from "express";
-import { isMongoConnected } from "../db.js";
+import { getMongoConnectionStatus } from "../db.js";
 import activityRoutes from "./activities.js";
 import authRoutes from "./auth.js";
 import feedRoutes from "./feed.js";
 import groupRoutes from "./groups.js";
 import profileRoutes from "./profile.js";
+import uploadRoutes from "./uploads.js";
 
 export const router = Router();
 
+function publicMongoStatus() {
+  const { error: _error, ...mongo } = getMongoConnectionStatus();
+
+  return mongo;
+}
+
 router.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "Mobile Activity mockup backend" });
+  const mongo = publicMongoStatus();
+
+  res.json({
+    status: mongo.connected ? "ok" : "degraded",
+    service: "Vita backend",
+    mongo,
+  });
 });
 
 router.use((_req, res, next) => {
-  if (!isMongoConnected()) {
-    res.status(503).json({ message: "MongoDB is not connected." });
+  const mongo = publicMongoStatus();
+
+  if (!mongo.connected) {
+    res.status(503).json({
+      message:
+        mongo.state === "failed"
+          ? "MongoDB connection failed."
+          : `MongoDB is ${mongo.state}.`,
+      mongo,
+    });
     return;
   }
 
@@ -25,4 +46,5 @@ router.use("/auth", authRoutes);
 router.use("/activities", activityRoutes);
 router.use("/feed", feedRoutes);
 router.use("/groups", groupRoutes);
+router.use("/uploads", uploadRoutes);
 router.use("/", profileRoutes);

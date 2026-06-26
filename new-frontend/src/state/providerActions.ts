@@ -31,6 +31,7 @@ export function useGroupMessageActions({
         }));
         setApiError(null);
       } catch (error) {
+        console.error("Unable to load messages", error);
         const message =
           error instanceof Error ? error.message : "Unable to load messages";
         setApiError(message);
@@ -61,6 +62,7 @@ export function useGroupMessageActions({
 
         return response.message;
       } catch (error) {
+        console.error("Unable to send message", error);
         const message =
           error instanceof Error ? error.message : "Unable to send message";
         setApiError(message);
@@ -78,17 +80,21 @@ export function useJoinActivityAction({
   applyGroupUpdate,
   setActiveTab,
   setApiError,
+  setChatMessages,
   setJoinedActivityIds,
   setSelectedActivityId,
   setSelectedGroupId,
+  navigateToGroup,
 }: {
   applyActivityUpdate: (activity: Activity) => void;
   applyGroupUpdate: (group: GroupChat) => void;
   setActiveTab: Setter<AppTab>;
   setApiError: Setter<string | null>;
+  setChatMessages: Setter<Record<number, ChatMessage[]>>;
   setJoinedActivityIds: Setter<number[]>;
   setSelectedActivityId: Setter<number | null>;
   setSelectedGroupId: Setter<number | null>;
+  navigateToGroup: (groupId: number) => void;
 }) {
   return useCallback(
     async (activityId: number) => {
@@ -97,16 +103,39 @@ export function useJoinActivityAction({
 
         applyActivityUpdate(response.activity);
         applyGroupUpdate(response.group);
+        setChatMessages((current) => {
+          const nextMessagesByGroup: Record<number, ChatMessage[]> = {};
+
+          for (const [groupId, messages] of Object.entries(current)) {
+            nextMessagesByGroup[Number(groupId)] = messages.map((message) => {
+              if (message.activityInvite?.activity.id !== activityId) {
+                return message;
+              }
+
+              return {
+                ...message,
+                activityInvite: {
+                  ...message.activityInvite,
+                  joiningFriends: response.activity.joiningFriends,
+                },
+              };
+            });
+          }
+
+          return nextMessagesByGroup;
+        });
         setJoinedActivityIds((current) =>
           markRecentActivityId(current, activityId),
         );
         setActiveTab("chat");
         setSelectedActivityId(null);
         setSelectedGroupId(response.group.id);
+        navigateToGroup(response.group.id);
         setApiError(null);
 
         return response.group;
       } catch (error) {
+        console.error("Unable to join activity", error);
         const message =
           error instanceof Error ? error.message : "Unable to join activity";
         setApiError(message);
@@ -118,9 +147,11 @@ export function useJoinActivityAction({
       applyGroupUpdate,
       setActiveTab,
       setApiError,
+      setChatMessages,
       setJoinedActivityIds,
       setSelectedActivityId,
       setSelectedGroupId,
+      navigateToGroup,
     ],
   );
 }
@@ -131,12 +162,14 @@ export function useJoinGroupAction({
   setApiError,
   setSelectedActivityId,
   setSelectedGroupId,
+  navigateToGroup,
 }: {
   applyGroupUpdate: (group: GroupChat) => void;
   setActiveTab: Setter<AppTab>;
   setApiError: Setter<string | null>;
   setSelectedActivityId: Setter<number | null>;
   setSelectedGroupId: Setter<number | null>;
+  navigateToGroup: (groupId: number) => void;
 }) {
   return useCallback(
     async (groupId: number) => {
@@ -147,10 +180,12 @@ export function useJoinGroupAction({
         setActiveTab("chat");
         setSelectedActivityId(null);
         setSelectedGroupId(response.group.id);
+        navigateToGroup(response.group.id);
         setApiError(null);
 
         return response.group;
       } catch (error) {
+        console.error("Unable to join group", error);
         const message =
           error instanceof Error ? error.message : "Unable to join group";
         setApiError(message);
@@ -163,6 +198,7 @@ export function useJoinGroupAction({
       setApiError,
       setSelectedActivityId,
       setSelectedGroupId,
+      navigateToGroup,
     ],
   );
 }

@@ -1,3 +1,5 @@
+import type { ChatPreview } from "./chatPreviews.js";
+
 type VitaCategory = "physical" | "social" | "cognitive" | "creative";
 
 type AnyDoc = Record<string, any>;
@@ -18,6 +20,38 @@ function formatChatTime(value: unknown) {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+  }).format(date);
+}
+
+function formatRelativeTime(value: unknown) {
+  const date = new Date(toIsoString(value));
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+
+  if (seconds < 60) {
+    return "Just now";
+  }
+
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  if (days < 7) {
+    return `${days}d ago`;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
   }).format(date);
 }
 
@@ -57,33 +91,72 @@ export function serializeAuthUser(user: AnyDoc) {
   };
 }
 
-export function serializeChat(chat: AnyDoc) {
+export function serializeChat(
+  chat: AnyDoc,
+  preview?: ChatPreview,
+  isAdmin = false,
+  adminUserIds = new Set<string>(),
+) {
   const item = asObject(chat);
+  const members = Array.isArray(item.members)
+    ? item.members.map((member: unknown) =>
+        serializeChatMember(member, adminUserIds),
+      )
+    : [];
 
   return {
     id: item.mockId,
     name: item.name,
     members: item.members?.length || 0,
+    memberList: members,
     avatar: item.avatar,
-    lastMessage: item.lastMessage ?? "",
-    time: item.time ?? "",
+    lastMessage: preview?.lastMessage ?? item.lastMessage ?? "",
+    time: preview?.time ?? item.time ?? "",
     unread: item.unread ?? 0,
+    isAdmin,
+  };
+}
+
+function serializeChatMember(
+  memberValue: unknown,
+  adminUserIds = new Set<string>(),
+) {
+  const member =
+    typeof memberValue === "object" && memberValue !== null
+      ? asObject(memberValue as AnyDoc)
+      : {};
+  const id = String(member._id ?? memberValue ?? "");
+
+  return {
+    id,
+    name: member.name ?? "Unknown user",
+    handle: member.handle ?? "",
+    avatar: member.avatarUrl ?? "",
+    isAdmin: adminUserIds.has(id),
   };
 }
 
 export function serializeChatMessage(
   message: AnyDoc,
   adminUserIds = new Set<string>(),
+  joiningUsersByActivityId = new Map<string, AnyDoc[]>(),
 ) {
   const item = asObject(message);
   const chat = asObject(item.chat ?? {});
   const sender = asObject(item.sender ?? {});
+  const messageType = item.type === "activity_invite" ? item.type : "text";
+  const activity = item.activity ? asObject(item.activity) : null;
   const createdAt = toIsoString(item.createdAt ?? item.updatedAt);
   const senderId = String(sender._id ?? "");
+  const activityId = activity ? String(activity._id ?? "") : "";
+  const joiningFriends = activityId
+    ? (joiningUsersByActivityId.get(activityId) ?? []).map(serializeActivityJoinUser)
+    : [];
 
   return {
     id: String(item._id),
     groupId: chat.mockId,
+    type: messageType,
     sender: {
       id: senderId,
       name: sender.name ?? "Unknown user",
@@ -94,6 +167,22 @@ export function serializeChatMessage(
     body: item.body,
     time: formatChatTime(createdAt),
     createdAt,
+    activityInvite:
+      messageType === "activity_invite" && activity
+        ? {
+            activity: {
+              id: activity.mockId,
+              title: activity.title,
+              date: activity.date,
+              time: activity.time,
+              location: activity.location,
+              durationMinutes: activity.durationMinutes,
+              price: activity.price,
+              categories: (activity.categories ?? []) as VitaCategory[],
+            },
+            joiningFriends,
+          }
+        : undefined,
   };
 }
 
@@ -168,11 +257,22 @@ export function serializeMapPin(pin: AnyDoc) {
   };
 }
 
-export function serializeFeedPost(post: AnyDoc) {
+type FeedPostMetrics =
+  | number
+  | {
+      commentCount?: number;
+      likeCount?: number;
+      likedByCurrentUser?: boolean;
+    };
+
+export function serializeFeedPost(post: AnyDoc, metricsValue?: FeedPostMetrics) {
   const item = asObject(post);
   const user = asObject(item.user);
   const activity = item.activity ? asObject(item.activity) : null;
   const group = item.group ? asObject(item.group) : null;
+  const metrics =
+    typeof metricsValue === "number" ? { commentCount: metricsValue } : metricsValue;
+  const likeCount = metrics?.likeCount ?? item.likesCount ?? item.likes ?? 0;
 
   return {
     id: item.mockId,
@@ -182,8 +282,10 @@ export function serializeFeedPost(post: AnyDoc) {
     time: item.time,
     caption: item.caption,
     image: item.image || undefined,
-    likes: item.likes,
-    comments: item.comments,
+    likes: likeCount,
+    likesCount: likeCount,
+    likedByMe: metrics?.likedByCurrentUser ?? false,
+    comments: metrics?.commentCount ?? item.comments,
     activity: activity?.title ?? group?.name,
     durationMinutes: activity?.durationMinutes,
     categories: (activity?.categories ?? []) as VitaCategory[],
@@ -195,5 +297,23 @@ export function serializeFeedPost(post: AnyDoc) {
           members: group.members?.length || 0,
         }
       : undefined,
+  };
+}
+
+export function serializeComment(comment: AnyDoc) {
+  const item = asObject(comment);
+  const post = asObject(item.post ?? {});
+  const user = asObject(item.user ?? {});
+  const createdAt = toIsoString(item.createdAt ?? item.updatedAt);
+
+  return {
+    id: String(item._id),
+    postId: post.mockId,
+    user: user.name ?? "Unknown user",
+    handle: user.handle ?? "",
+    avatar: user.avatarUrl ?? "",
+    body: item.body,
+    time: formatRelativeTime(createdAt),
+    createdAt,
   };
 }

@@ -2,7 +2,9 @@ import type {
   ChatMessage,
   AuthUser,
   CreateActivityInput,
+  CreateFeedCommentInput,
   CreateFeedPostInput,
+  FeedComment,
   FeedPost,
   Friend,
   GroupChat,
@@ -24,14 +26,18 @@ export type AppState = {
   isAuthReady: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  friendInviteFeedback: string | null;
+  friendInviteFriend: Friend | null;
   showProfile: boolean;
   showMap: boolean;
   showProfileFriends: boolean;
+  showSettings: boolean;
   selectedActivityId: number | null;
   selectedGroupId: number | null;
   premiumActivities: PremiumActivity[];
   standardActivities: StandardActivity[];
   feedPosts: FeedPost[];
+  feedComments: Record<number, FeedComment[]>;
   groupChats: GroupChat[];
   chatMessages: Record<number, ChatMessage[]>;
   friends: Friend[];
@@ -44,6 +50,14 @@ export type AppState = {
   signUp: (input: SignUpInput) => Promise<void>;
   createActivity: (input: CreateActivityInput) => Promise<StandardActivity>;
   createFeedPost: (input: CreateFeedPostInput) => Promise<FeedPost>;
+  loadFeedComments: (postId: number) => Promise<FeedComment[]>;
+  createFeedComment: (
+    postId: number,
+    input: CreateFeedCommentInput,
+  ) => Promise<FeedComment>;
+  addFriend: (friendId: string) => Promise<Friend>;
+  clearFriendInvite: () => void;
+  clearFriendInviteResult: () => void;
   joinActivity: (activityId: number) => Promise<GroupChat>;
   joinGroup: (groupId: number) => Promise<GroupChat>;
   loadGroupMessages: (groupId: number) => Promise<void>;
@@ -56,8 +70,10 @@ export type AppState = {
   closeGroup: () => void;
   openProfile: () => void;
   closeProfile: () => void;
+  openSettings: () => void;
+  closeSettings: () => void;
   setShowMap: (showMap: boolean) => void;
   setShowProfileFriends: (showFriends: boolean) => void;
-  togglePostLike: (postId: number) => void;
+  togglePostLike: (postId: number) => Promise<void>;
   toggleActivityLike: (activityId: number) => void;
 };

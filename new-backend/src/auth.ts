@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { Types } from "mongoose";
 import { isMongoConnected } from "./db.js";
-import { UserModel, type UserDocument } from "./models/MockupData.js";
+import { UserModel, type UserDocument } from "./models/VitaData.js";
 
 type TokenPayload = {
   sub: string;

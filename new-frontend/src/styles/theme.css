@@ -45,6 +45,53 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --app-page-background: linear-gradient(180deg, #171625 0%, #211a2d 48%, #171b28 100%);
+  --phone-shell-background:
+    linear-gradient(180deg, rgba(244, 185, 80, 0.07), transparent 22%),
+    linear-gradient(180deg, var(--background), #1b1a2a 54%, #171625);
+}
+
+.vita-theme-light {
+  --background: #f6f8f3;
+  --foreground: #1b2220;
+  --card: #ffffff;
+  --card-foreground: #1b2220;
+  --popover: #ffffff;
+  --popover-foreground: #1b2220;
+  --primary: #1b2220;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eee8;
+  --secondary-foreground: #1b2220;
+  --muted: #e8eee8;
+  --muted-foreground: #68736f;
+  --accent: #2f8a63;
+  --accent-foreground: #ffffff;
+  --brand-ink: #1b2220;
+  --brand-shadow: rgba(28, 42, 35, 0.16);
+  --destructive: #c82b46;
+  --destructive-foreground: #ffffff;
+  --border: rgba(36, 50, 44, 0.13);
+  --input: transparent;
+  --input-background: #e8eee8;
+  --switch-background: #d7e1d9;
+  --ring: #2f8a63;
+  --chart-1: #2f8a63;
+  --chart-2: #d79421;
+  --chart-3: #c44991;
+  --chart-4: #5368d8;
+  --chart-5: #1b2220;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1b2220;
+  --sidebar-primary: #2f8a63;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8eee8;
+  --sidebar-accent-foreground: #1b2220;
+  --sidebar-border: rgba(36, 50, 44, 0.13);
+  --sidebar-ring: #2f8a63;
+  --app-page-background: linear-gradient(180deg, #f8fbf3 0%, #eef6f7 52%, #f6f8f3 100%);
+  --phone-shell-background:
+    linear-gradient(180deg, rgba(75, 209, 120, 0.12), transparent 22%),
+    linear-gradient(180deg, var(--background), #edf5f1 54%, #f8fbf3);
 }
 
 .dark {
@@ -132,8 +179,7 @@
 
   body {
     @apply bg-background text-foreground;
-    background:
-      linear-gradient(180deg, #171625 0%, #211a2d 48%, #171b28 100%);
+    background: var(--app-page-background);
     margin: 0;
   }
 
@@ -218,9 +264,7 @@
   }
 
   .vita-phone-shell {
-    background:
-      linear-gradient(180deg, rgba(244, 185, 80, 0.07), transparent 22%),
-      linear-gradient(180deg, var(--background), #1b1a2a 54%, #171625);
+    background: var(--phone-shell-background);
   }
 
   .vita-top-logo {
@@ -427,7 +471,6 @@
     width: 5.35rem;
     flex: 0 0 auto;
     background: transparent;
-    box-shadow:
-      0 20px 42px var(--brand-shadow);
+    box-shadow: none;
   }
 }

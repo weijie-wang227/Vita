@@ -1,15 +1,24 @@
-import { Calendar, Clock, MapPin, Timer, Users } from "lucide-react";
-import type { VitaCategory } from "../../lib/types";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  MessageCircle,
+  Timer,
+  Users,
+} from "lucide-react";
+import type { GroupChat, VitaCategory } from "../../lib/types";
 import { NumberStepper } from "./NumberStepper";
 import type { CreateActivityFormState } from "./types";
 import { VitaCategorySelector } from "./VitaCategorySelector";
 
 export function ActivityDetailsFields({
   form,
+  adminGroups,
   onCategoryToggle,
   onFieldChange,
 }: {
   form: CreateActivityFormState;
+  adminGroups: GroupChat[];
   onCategoryToggle: (category: VitaCategory) => void;
   onFieldChange: <Key extends keyof CreateActivityFormState>(
     field: Key,
@@ -30,6 +39,29 @@ export function ActivityDetailsFields({
           required
         />
       </label>
+
+      {adminGroups.length > 0 && (
+        <label className="block">
+          <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <MessageCircle size={13} />
+            Tag Group Chat
+          </span>
+          <select
+            value={form.linkedGroupId}
+            onChange={(event) =>
+              onFieldChange("linkedGroupId", event.target.value)
+            }
+            className="h-11 w-full rounded-xl border border-border bg-input-background px-3 text-sm text-foreground outline-none"
+          >
+            <option value="">New group chat</option>
+            {adminGroups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <label className="block">
         <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">

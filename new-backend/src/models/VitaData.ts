@@ -73,10 +73,17 @@ const chatMessageSchema = new Schema(
     chat: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
     sender: { type: Schema.Types.ObjectId, required: true, ref: "User" },
     body: { type: String, required: true, trim: true, maxlength: 1000 },
+    type: {
+      type: String,
+      enum: ["text", "activity_invite"],
+      default: "text",
+    },
+    activity: { type: Schema.Types.ObjectId, ref: "Activity" },
   },
   { timestamps: true },
 );
 chatMessageSchema.index({ chat: 1, createdAt: 1 });
+chatMessageSchema.index({ activity: 1 });
 
 const activitySchema = new Schema(
   {
@@ -130,10 +137,32 @@ const feedPostSchema = new Schema(
     caption: { type: String, required: true },
     image: { type: String },
     likes: { type: Number, required: true, default: 0 },
+    likesCount: { type: Number, required: true, default: 0 },
     comments: { type: Number, required: true, default: 0 },
   },
   { timestamps: true },
 );
+
+const commentSchema = new Schema(
+  {
+    post: { type: Schema.Types.ObjectId, required: true, ref: "FeedPost" },
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    body: { type: String, required: true, trim: true, maxlength: 500 },
+  },
+  { timestamps: true },
+);
+commentSchema.index({ post: 1, createdAt: 1, _id: 1 });
+commentSchema.index({ user: 1, createdAt: -1 });
+
+const likeSchema = new Schema(
+  {
+    post: { type: Schema.Types.ObjectId, required: true, ref: "FeedPost" },
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+  },
+  { timestamps: true },
+);
+likeSchema.index({ post: 1, user: 1 }, { unique: true });
+likeSchema.index({ user: 1, createdAt: -1 });
 
 export const UserModel = mongoose.model<any>("User", userSchema, "users");
 export const FriendshipModel = mongoose.model(
@@ -164,3 +193,9 @@ export const FeedPostModel = mongoose.model<any>(
   feedPostSchema,
   "feedPosts",
 );
+export const CommentModel = mongoose.model<any>(
+  "Comment",
+  commentSchema,
+  "comments",
+);
+export const LikeModel = mongoose.model<any>("Like", likeSchema, "likes");

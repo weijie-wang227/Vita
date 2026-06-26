@@ -1,27 +1,42 @@
 import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
+  CheckCircle2,
   Edit3,
   LogOut,
   MessageCircle,
   QrCode,
+  Settings,
   UserPlus,
   Users,
 } from "lucide-react";
 import { BaseSearchBar } from "../components/BaseSearchBar";
 import { useAppState } from "../state";
-import { qrModules } from "./profileQrModules";
 
 export function ProfilePage() {
   const {
+    authUser,
+    clearFriendInviteResult,
     friends,
+    friendInviteFeedback,
+    friendInviteFriend,
     profile,
     signOut,
     showProfileFriends,
+    openSettings,
     setShowProfileFriends,
   } = useAppState();
+  const [shareFeedback, setShareFeedback] = useState("");
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [debouncedFriendSearchQuery, setDebouncedFriendSearchQuery] =
     useState("");
+  const inviteUrl =
+    authUser?.id && typeof window !== "undefined"
+      ? `${window.location.origin}/profile?friendId=${encodeURIComponent(
+          authUser.id,
+        )}`
+      : "";
+  const qrFeedback = shareFeedback || friendInviteFeedback;
   const activeFriendSearchQuery = debouncedFriendSearchQuery.toLowerCase();
   const filteredFriends = activeFriendSearchQuery
     ? friends.filter((friend) =>
@@ -37,13 +52,57 @@ export function ProfilePage() {
       )
     : friends;
 
+  const handleShareProfileLink = async () => {
+    if (!inviteUrl) {
+      setShareFeedback("Sign in again to create your profile link.");
+      return;
+    }
+
+    const shareData = {
+      title: `${profile.name} on Vita`,
+      text: `Add ${profile.name} as a friend on Vita.`,
+      url: inviteUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareFeedback("Profile link shared.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(inviteUrl);
+      setShareFeedback("Profile link copied.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+        setShareFeedback("Profile link copied.");
+      } catch {
+        setShareFeedback(inviteUrl);
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="relative flex flex-col h-full bg-background">
       <div className="flex items-center gap-3 px-4 pt-5 pb-4">
         <h2 className="text-base font-semibold text-foreground flex-1">
           My Profile
         </h2>
         <button
+          type="button"
+          onClick={openSettings}
+          className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+          aria-label="Open settings"
+        >
+          <Settings size={14} className="text-muted-foreground" />
+        </button>
+        <button
+          type="button"
           className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
           aria-label="Edit profile"
         >
@@ -111,34 +170,18 @@ export function ProfilePage() {
           {!showProfileFriends ? (
             <div className="flex flex-col items-center bg-card rounded-2xl p-5 border border-border">
               <p className="text-xs text-muted-foreground mb-4 text-center">
-                Scan to add Linda as a friend
+                Scan to add {profile.name} as a friend
               </p>
               <div className="w-40 h-40 bg-white rounded-xl p-2.5 mb-4">
-                <svg
-                  viewBox="0 0 29 29"
-                  className="w-full h-full"
-                  style={{ imageRendering: "pixelated" }}
-                >
-                  <rect x="0" y="0" width="7" height="7" fill="#000" />
-                  <rect x="1" y="1" width="5" height="5" fill="#fff" />
-                  <rect x="2" y="2" width="3" height="3" fill="#000" />
-                  <rect x="22" y="0" width="7" height="7" fill="#000" />
-                  <rect x="23" y="1" width="5" height="5" fill="#fff" />
-                  <rect x="24" y="2" width="3" height="3" fill="#000" />
-                  <rect x="0" y="22" width="7" height="7" fill="#000" />
-                  <rect x="1" y="23" width="5" height="5" fill="#fff" />
-                  <rect x="2" y="24" width="3" height="3" fill="#000" />
-                  {qrModules.map(([x, y], index) => (
-                    <rect
-                      key={index}
-                      x={x}
-                      y={y}
-                      width="1"
-                      height="1"
-                      fill="#000"
-                    />
-                  ))}
-                </svg>
+                {inviteUrl ? (
+                  <QRCodeSVG
+                    value={inviteUrl}
+                    size={140}
+                    level="M"
+                    marginSize={2}
+                    title={`${profile.name} Vita friend invite`}
+                  />
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full overflow-hidden">
@@ -155,13 +198,34 @@ export function ProfilePage() {
                   / {profile.handle}
                 </span>
               </div>
-              <button className="mt-3 flex items-center gap-1.5 text-xs text-accent font-medium">
+              <button
+                type="button"
+                onClick={handleShareProfileLink}
+                className="mt-3 flex items-center gap-1.5 text-xs text-accent font-medium disabled:opacity-50"
+                disabled={!inviteUrl}
+              >
                 <UserPlus size={12} />
                 Share my profile link
               </button>
+              {qrFeedback ? (
+                <p
+                  className="mt-2 max-w-full break-words text-center text-[11px] text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {qrFeedback}
+                </p>
+              ) : null}
             </div>
           ) : (
             <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              {friendInviteFeedback ? (
+                <p
+                  className="border-b border-border px-3 py-2 text-center text-[11px] text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {friendInviteFeedback}
+                </p>
+              ) : null}
               <BaseSearchBar
                 value={friendSearchQuery}
                 onValueChange={setFriendSearchQuery}
@@ -198,7 +262,7 @@ export function ProfilePage() {
                       {friend.name}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      {friend.mutual} mutual / {friend.joined[0]}
+                      {friend.mutual} mutual / {friend.joined[0] ?? "Just connected"}
                     </p>
                   </div>
                   <button
@@ -220,6 +284,39 @@ export function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {friendInviteFriend ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[320px] rounded-3xl border border-border bg-card p-5 text-center shadow-2xl shadow-black/25">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/15">
+              <CheckCircle2 size={26} className="text-accent" />
+            </div>
+            <div className="mx-auto h-20 w-20 overflow-hidden rounded-full border-2 border-accent bg-secondary">
+              <img
+                src={friendInviteFriend.avatar}
+                alt={friendInviteFriend.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <h2 className="mt-3 text-lg font-bold text-foreground">
+              Friend added successfully
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {friendInviteFriend.name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {friendInviteFriend.handle}
+            </p>
+            <button
+              type="button"
+              onClick={clearFriendInviteResult}
+              className="mt-5 h-11 w-full rounded-2xl bg-accent text-sm font-bold text-accent-foreground"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

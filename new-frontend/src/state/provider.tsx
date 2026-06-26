@@ -1,24 +1,23 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router";
 import {
+  addFriend as requestAddFriend,
   clearAuthToken,
   createActivity as requestCreateActivity,
+  createFeedComment as requestCreateFeedComment,
   createFeedPost as requestCreateFeedPost,
+  fetchFeedComments as requestFetchFeedComments,
+  likeFeedPost as requestLikeFeedPost,
   setAuthToken,
   signIn as requestSignIn,
   signUp as requestSignUp,
+  unlikeFeedPost as requestUnlikeFeedPost,
 } from "../api";
-import {
-  feedPosts as fallbackFeedPosts,
-  friends as fallbackFriends,
-  mapPins as fallbackMapPins,
-  premiumActivities as fallbackPremiumActivities,
-  profile as fallbackProfile,
-  standardActivities as fallbackStandardActivities,
-} from "../data/mockData";
 import type {
   Activity,
   ChatMessage,
+  FeedComment,
   FeedPost,
   Friend,
   GroupChat,
@@ -35,41 +34,86 @@ import {
 } from "./providerActions";
 import { useLoadAppData, useRestoreSession } from "./providerEffects";
 import {
-  activityIdsJoinedByProfile,
-  createLocalActivity,
-  createLocalFeedPost,
   markRecentActivityId,
   replaceActivity,
   upsertGroup,
 } from "./providerHelpers";
 import type { AppState, AppTab } from "./types";
 
-const fallbackJoinedActivityIds = activityIdsJoinedByProfile(
-  [...fallbackPremiumActivities, ...fallbackStandardActivities],
-  fallbackProfile.handle,
-);
+const emptyProfile: Profile = {
+  name: "",
+  handle: "",
+  avatar: "",
+  bio: "",
+  stats: [],
+};
+
+const tabPaths: Record<AppTab, string> = {
+  activities: "/activities",
+  feed: "/feed",
+  chat: "/groups",
+  profile: "/profile",
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function getPendingFriendInviteId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.search).get("friendId");
+}
+
+function clearPendingFriendInviteId() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete("friendId");
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${url.pathname}${url.search}${url.hash}`,
+  );
+}
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AppTab>("activities");
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [friendInviteFeedback, setFriendInviteFeedback] = useState<string | null>(
+    null,
+  );
+  const [friendInviteFriend, setFriendInviteFriend] = useState<Friend | null>(
+    null,
+  );
+  const [pendingFriendInviteId, setPendingFriendInviteId] = useState<
+    string | null
+  >(() => getPendingFriendInviteId());
   const [showProfile, setShowProfile] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showProfileFriends, setShowProfileFriends] = useState(false);
-  const [premiumActivities, setPremiumActivities] = useState<PremiumActivity[]>(
-    fallbackPremiumActivities,
-  );
+  const [showSettings, setShowSettings] = useState(false);
+  const [premiumActivities, setPremiumActivities] = useState<PremiumActivity[]>([]);
   const [standardActivities, setStandardActivities] = useState<
     StandardActivity[]
-  >(fallbackStandardActivities);
-  const [feedPosts, setFeedPosts] = useState<FeedPost[]>(fallbackFeedPosts);
+  >([]);
+  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
+  const [feedComments, setFeedComments] = useState<Record<number, FeedComment[]>>(
+    {},
+  );
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [chatMessages, setChatMessages] = useState<
     Record<number, ChatMessage[]>
   >({});
-  const [friends, setFriends] = useState<Friend[]>(fallbackFriends);
-  const [mapPins, setMapPins] = useState<MapPin[]>(fallbackMapPins);
-  const [profile, setProfile] = useState<Profile>(fallbackProfile);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [mapPins, setMapPins] = useState<MapPin[]>([]);
+  const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [authUser, setAuthUser] = useState<AppState["authUser"]>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -83,9 +127,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [likedActivityIds, setLikedActivityIds] = useState<
     Record<number, boolean>
   >({});
-  const [joinedActivityIds, setJoinedActivityIds] = useState<number[]>(
-    fallbackJoinedActivityIds,
-  );
+  const [joinedActivityIds, setJoinedActivityIds] = useState<number[]>([]);
 
   useRestoreSession({
     setAuthError,
@@ -122,6 +164,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setGroupChats((current) => upsertGroup(current, group));
   }, []);
 
+  const navigateToGroup = useCallback(
+    (groupId: number) => navigate(`/groups/${groupId}`),
+    [navigate],
+  );
+
   const { loadGroupMessages, sendGroupMessage } = useGroupMessageActions({
     applyGroupUpdate,
     setApiError,
@@ -131,8 +178,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const joinActivity = useJoinActivityAction({
     applyActivityUpdate,
     applyGroupUpdate,
+    navigateToGroup,
     setActiveTab,
     setApiError,
+    setChatMessages,
     setJoinedActivityIds,
     setSelectedActivityId,
     setSelectedGroupId,
@@ -140,11 +189,116 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const joinGroup = useJoinGroupAction({
     applyGroupUpdate,
+    navigateToGroup,
     setActiveTab,
     setApiError,
     setSelectedActivityId,
     setSelectedGroupId,
   });
+
+  const addFriend = useCallback(async (friendId: string) => {
+    const nextFriendId = friendId.trim();
+
+    if (!nextFriendId) {
+      const message = "Friend link is missing a user ID.";
+      setApiError(message);
+      throw new Error(message);
+    }
+
+    try {
+      const friend = await requestAddFriend(nextFriendId);
+
+      setFriends((current) =>
+        current.some((item) => item.id === friend.id) ? current : [...current, friend],
+      );
+      setShowProfileFriends(true);
+      setActiveTab("profile");
+      navigate("/profile");
+      setApiError(null);
+
+      return friend;
+    } catch (error) {
+      console.error("Unable to add friend", error);
+      const message = getErrorMessage(error, "Unable to add friend");
+      setApiError(message);
+      throw new Error(message);
+    }
+  }, [navigate]);
+
+  const clearFriendInvite = useCallback(() => {
+    clearPendingFriendInviteId();
+    setPendingFriendInviteId(null);
+    setFriendInviteFeedback(null);
+  }, []);
+
+  const clearFriendInviteResult = useCallback(() => {
+    setFriendInviteFriend(null);
+    setFriendInviteFeedback(null);
+  }, []);
+
+  useEffect(() => {
+    if (!authUser || !pendingFriendInviteId) {
+      return;
+    }
+
+    let ignore = false;
+
+    setShowProfileFriends(true);
+    setActiveTab("profile");
+
+    async function acceptFriendInvite() {
+      if (!pendingFriendInviteId) {
+        return;
+      }
+
+      if (pendingFriendInviteId === authUser.id) {
+        setFriendInviteFeedback("You cannot add yourself from your own QR code.");
+        navigate("/profile", { replace: true });
+        clearPendingFriendInviteId();
+        setPendingFriendInviteId(null);
+        return;
+      }
+
+      try {
+        const friend = await addFriend(pendingFriendInviteId);
+
+        if (ignore) {
+          return;
+        }
+
+        setFriendInviteFriend(friend);
+        setFriendInviteFeedback(`${friend.name} added successfully.`);
+        clearPendingFriendInviteId();
+        setPendingFriendInviteId(null);
+        navigate("/profile", { replace: true });
+      } catch (error) {
+        if (!ignore) {
+          setFriendInviteFeedback(
+            getErrorMessage(error, "Unable to add friend from invite link."),
+          );
+          clearPendingFriendInviteId();
+          setPendingFriendInviteId(null);
+          navigate("/profile", { replace: true });
+        }
+      }
+    }
+
+    acceptFriendInvite();
+
+    return () => {
+      ignore = true;
+    };
+  }, [addFriend, authUser, navigate, pendingFriendInviteId]);
+
+  useEffect(() => {
+    setLikedPostIds(
+      Object.fromEntries(
+        feedPosts
+          .filter((post) => post.likedByMe)
+          .map((post) => [post.id, true]),
+      ),
+    );
+  }, [feedPosts]);
 
   const appState = useMemo<AppState>(
     () => ({
@@ -155,14 +309,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       isAuthReady,
       isAuthenticated: Boolean(authUser),
       isLoading,
+      friendInviteFeedback,
+      friendInviteFriend,
       showProfile,
       showMap,
       showProfileFriends,
+      showSettings,
       selectedActivityId,
       selectedGroupId,
       premiumActivities,
       standardActivities,
       feedPosts,
+      feedComments,
       groupChats,
       chatMessages,
       friends,
@@ -178,15 +336,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setAuthToken(token);
           setAuthUser(user);
           setProfile(user);
+          setPremiumActivities([]);
+          setStandardActivities([]);
+          setFeedPosts([]);
+          setFeedComments({});
+          setGroupChats([]);
+          setChatMessages({});
+          setFriends([]);
+          setMapPins([]);
           setAuthError(null);
           setActiveTab("activities");
           setShowProfile(false);
+          setShowSettings(false);
           setSelectedActivityId(null);
           setSelectedGroupId(null);
           setJoinedActivityIds([]);
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Unable to sign in";
+          console.error("Unable to sign in", error);
+          const message = getErrorMessage(error, "Unable to sign in");
           setAuthError(message);
           throw new Error(message);
         }
@@ -198,15 +365,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setAuthToken(token);
           setAuthUser(user);
           setProfile(user);
+          setPremiumActivities([]);
+          setStandardActivities([]);
+          setFeedPosts([]);
+          setFeedComments({});
+          setGroupChats([]);
+          setChatMessages({});
+          setFriends([]);
+          setMapPins([]);
           setAuthError(null);
           setActiveTab("activities");
           setShowProfile(false);
+          setShowSettings(false);
           setSelectedActivityId(null);
           setSelectedGroupId(null);
           setJoinedActivityIds([]);
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Unable to sign up";
+          console.error("Unable to sign up", error);
+          const message = getErrorMessage(error, "Unable to sign up");
           setAuthError(message);
           throw new Error(message);
         }
@@ -226,28 +402,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
           return activity;
         } catch (error) {
-          // TODO: Remove this local-only fallback once MongoDB writes are reliable again.
-          const { activity, mapPin } = createLocalActivity(
-            input,
-            profile,
-            standardActivities,
-            premiumActivities,
-            mapPins,
-          );
-
-          setStandardActivities((current) => [...current, activity]);
-          setMapPins((current) => [...current, mapPin]);
-          setJoinedActivityIds((current) =>
-            markRecentActivityId(current, activity.id),
-          );
-          setShowMap(false);
-          setApiError(
-            error instanceof Error
-              ? `${error.message} Created a temporary local activity instead.`
-              : "Created a temporary local activity instead.",
-          );
-
-          return activity;
+          console.error("Unable to create activity", error);
+          const message = getErrorMessage(error, "Unable to create activity");
+          setApiError(message);
+          throw new Error(message);
         }
       },
       createFeedPost: async (input) => {
@@ -262,18 +420,72 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
           return post;
         } catch (error) {
-          const post = createLocalFeedPost(input, profile, feedPosts, groupChats);
-
-          setFeedPosts((current) => [post, ...current]);
-          setApiError(
-            error instanceof Error
-              ? `${error.message} Created a temporary local post instead.`
-              : "Created a temporary local post instead.",
-          );
-
-          return post;
+          console.error("Unable to create feed post", error);
+          const message = getErrorMessage(error, "Unable to create feed post");
+          setApiError(message);
+          throw new Error(message);
         }
       },
+      loadFeedComments: async (postId) => {
+        try {
+          const response = await requestFetchFeedComments(postId);
+
+          setFeedComments((current) => ({
+            ...current,
+            [postId]: response.comments,
+          }));
+          setFeedPosts((current) =>
+            current.map((post) =>
+              post.id === postId
+                ? { ...post, comments: response.commentCount }
+                : post,
+            ),
+          );
+          setApiError(null);
+
+          return response.comments;
+        } catch (error) {
+          console.error("Unable to load comments", error);
+          const message = getErrorMessage(error, "Unable to load comments");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      createFeedComment: async (postId, input) => {
+        try {
+          const response = await requestCreateFeedComment(postId, input);
+
+          setFeedComments((current) => {
+            const comments = current[postId] ?? [];
+
+            return {
+              ...current,
+              [postId]: [
+                ...comments.filter((comment) => comment.id !== response.comment.id),
+                response.comment,
+              ],
+            };
+          });
+          setFeedPosts((current) =>
+            current.map((post) =>
+              post.id === postId
+                ? { ...post, comments: response.commentCount }
+                : post,
+            ),
+          );
+          setApiError(null);
+
+          return response.comment;
+        } catch (error) {
+          console.error("Unable to create comment", error);
+          const message = getErrorMessage(error, "Unable to create comment");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      addFriend,
+      clearFriendInvite,
+      clearFriendInviteResult,
       joinActivity,
       joinGroup,
       loadGroupMessages,
@@ -282,43 +494,111 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         clearAuthToken();
         setAuthUser(null);
         setAuthError(null);
-        setProfile(fallbackProfile);
-        setFriends(fallbackFriends);
+        setProfile(emptyProfile);
+        setPremiumActivities([]);
+        setStandardActivities([]);
+        setFeedPosts([]);
+        setFeedComments({});
+        setFriends([]);
+        setMapPins([]);
         setGroupChats([]);
         setChatMessages({});
-        setJoinedActivityIds(fallbackJoinedActivityIds);
+        setJoinedActivityIds([]);
         setActiveTab("activities");
         setShowProfile(false);
+        setShowSettings(false);
         setSelectedActivityId(null);
         setSelectedGroupId(null);
+        clearFriendInvite();
+        clearFriendInviteResult();
+        navigate("/activities", { replace: true });
       },
       selectTab: (tab) => {
         setShowProfile(false);
+        setShowSettings(false);
         setSelectedActivityId(null);
         setSelectedGroupId(null);
         setActiveTab(tab);
+        navigate(tabPaths[tab]);
       },
-      openActivity: (activityId) => setSelectedActivityId(activityId),
-      closeActivity: () => setSelectedActivityId(null),
-      openGroup: (groupId) => setSelectedGroupId(groupId),
-      closeGroup: () => setSelectedGroupId(null),
+      openActivity: (activityId) => {
+        setSelectedGroupId(null);
+        setSelectedActivityId(activityId);
+        navigate(`/activities/${activityId}`);
+      },
+      closeActivity: () => {
+        setSelectedActivityId(null);
+        navigate("/activities");
+      },
+      openGroup: (groupId) => {
+        setSelectedActivityId(null);
+        setSelectedGroupId(groupId);
+        navigate(`/groups/${groupId}`);
+      },
+      closeGroup: () => {
+        setSelectedGroupId(null);
+        navigate("/groups");
+      },
       openProfile: () => {
         setSelectedActivityId(null);
         setSelectedGroupId(null);
         setShowProfile(false);
+        setShowSettings(false);
         setActiveTab("profile");
+        navigate("/profile");
       },
       closeProfile: () => {
         setShowProfile(false);
+        setShowSettings(false);
         setActiveTab("activities");
+        navigate("/activities");
+      },
+      openSettings: () => {
+        setSelectedActivityId(null);
+        setSelectedGroupId(null);
+        setShowSettings(true);
+        setActiveTab("profile");
+        navigate("/settings");
+      },
+      closeSettings: () => {
+        setShowSettings(false);
+        navigate("/profile");
       },
       setShowMap,
       setShowProfileFriends,
-      togglePostLike: (postId) =>
-        setLikedPostIds((current) => ({
-          ...current,
-          [postId]: !current[postId],
-        })),
+      togglePostLike: async (postId) => {
+        const post = feedPosts.find((item) => item.id === postId);
+        const isLiked = Boolean(likedPostIds[postId] ?? post?.likedByMe);
+
+        try {
+          const response = isLiked
+            ? await requestUnlikeFeedPost(postId)
+            : await requestLikeFeedPost(postId);
+
+          setFeedPosts((current) =>
+            current.map((item) =>
+              item.id === postId
+                ? {
+                    ...item,
+                    likes: response.likes,
+                    likesCount: response.likesCount,
+                    likedByMe: response.likedByMe,
+                  }
+                : item,
+            ),
+          );
+          setLikedPostIds((current) => ({
+            ...current,
+            [postId]: response.likedByMe,
+          }));
+          setApiError(null);
+        } catch (error) {
+          console.error("Unable to update post like", error);
+          const message = getErrorMessage(error, "Unable to update post like");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
       toggleActivityLike: (activityId) =>
         setLikedActivityIds((current) => ({
           ...current,
@@ -332,14 +612,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       authUser,
       isAuthReady,
       isLoading,
+      friendInviteFeedback,
+      friendInviteFriend,
       showProfile,
       showMap,
       showProfileFriends,
+      showSettings,
       selectedActivityId,
       selectedGroupId,
       premiumActivities,
       standardActivities,
       feedPosts,
+      feedComments,
       groupChats,
       chatMessages,
       friends,
@@ -348,7 +632,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinedActivityIds,
       likedPostIds,
       likedActivityIds,
+      navigate,
       applyGroupUpdate,
+      addFriend,
+      clearFriendInvite,
+      clearFriendInviteResult,
       joinActivity,
       joinGroup,
       loadGroupMessages,

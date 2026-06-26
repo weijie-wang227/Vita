@@ -26,7 +26,7 @@ function searchableActivityText(activity: Activity) {
     activity.time,
     activity.location,
     activity.price,
-    activity.rating,
+    // activity.rating,
     activity.categories.join(" "),
     activity.joiningFriends
       .map((friend) => `${friend.name} ${friend.handle}`)

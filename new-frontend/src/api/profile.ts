@@ -8,3 +8,9 @@ export async function fetchProfile() {
 export async function fetchFriends() {
   return apiRequest<Friend[]>("/friends");
 }
+
+export async function addFriend(friendId: string) {
+  return apiRequest<Friend>(`/friends/add/${encodeURIComponent(friendId)}`, {
+    method: "POST",
+  });
+}

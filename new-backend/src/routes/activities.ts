@@ -4,9 +4,11 @@ import {
   AdminModel,
   ActivityJoinModel,
   ActivityModel,
+  ChatMessageModel,
   ChatModel,
   MapPinModel,
-} from "../models/MockupData.js";
+} from "../models/VitaData.js";
+import { getChatPreview, getLatestChatPreviews } from "../chatPreviews.js";
 import { serializeActivity, serializeChat, serializeMapPin } from "../serializers.js";
 
 const router = Router();
@@ -87,6 +89,31 @@ async function nextMockId(model: typeof ActivityModel) {
   return (lastItem?.mockId ?? 0) + 1;
 }
 
+function formatPreviewTime(value: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(value);
+}
+
+async function isGroupAdmin(userId: unknown, groupId: unknown) {
+  const admin = await AdminModel.findOne({ user: userId, group: groupId }).select(
+    "_id",
+  );
+
+  return Boolean(admin);
+}
+
+async function findAdminUserIds(groupId: unknown) {
+  const admins = await AdminModel.find({ group: groupId }).select("user");
+
+  return new Set(
+    admins.map((admin: Record<string, any>) =>
+      String(admin.user?._id ?? admin.user),
+    ),
+  );
+}
+
 router.get("/", async (_req, res) => {
   const activities = await ActivityModel.find({ isPremium: false })
     .populate("host")
@@ -144,6 +171,12 @@ router.post("/", async (req, res, next) => {
     const durationMinutes = getFiniteNumber(req.body?.durationMinutes);
     const spots = getFiniteNumber(req.body?.spots);
     const price = getString(req.body?.price) || "0 credits";
+    const linkedGroupId =
+      req.body?.groupId === undefined ||
+      req.body?.groupId === null ||
+      req.body?.groupId === ""
+        ? null
+        : Number(req.body.groupId);
     const categories: string[] = Array.isArray(req.body?.categories)
       ? req.body.categories.map(getString).filter(Boolean)
       : [];
@@ -152,6 +185,11 @@ router.post("/", async (req, res, next) => {
       res.status(400).json({
         message: "Title, date, time, and location are required.",
       });
+      return;
+    }
+
+    if (linkedGroupId !== null && !Number.isInteger(linkedGroupId)) {
+      res.status(400).json({ message: "Choose a valid group chat." });
       return;
     }
 
@@ -192,21 +230,51 @@ router.post("/", async (req, res, next) => {
       nextMockId(ChatModel),
       nextMockId(MapPinModel),
     ]);
-    const chat = await ChatModel.create({
-      mockId: chatMockId,
-      name: title,
-      avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(
-        title,
-      )}`,
-      members: [user._id],
-      lastMessage: "",
-      time: "",
-      unread: 0,
-    });
-    await AdminModel.create({
-      user: user._id,
-      group: chat._id,
-    });
+    const linkedChat =
+      linkedGroupId === null
+        ? null
+        : await ChatModel.findOne({
+            mockId: linkedGroupId,
+            members: user._id,
+          });
+
+    if (linkedGroupId !== null && !linkedChat) {
+      res.status(404).json({ message: "Group chat not found." });
+      return;
+    }
+
+    if (linkedChat) {
+      const canPostInvite = await isGroupAdmin(user._id, linkedChat._id);
+
+      if (!canPostInvite) {
+        res.status(403).json({
+          message: "Only group admins can link activities to this chat.",
+        });
+        return;
+      }
+    }
+
+    const chat =
+      linkedChat ??
+      (await ChatModel.create({
+        mockId: chatMockId,
+        name: title,
+        avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(
+          title,
+        )}`,
+        members: [user._id],
+        lastMessage: "",
+        time: "",
+        unread: 0,
+      }));
+
+    if (!linkedChat) {
+      await AdminModel.create({
+        user: user._id,
+        group: chat._id,
+      });
+    }
+
     const activity = await ActivityModel.create({
       mockId: activityMockId,
       title,
@@ -237,16 +305,32 @@ router.post("/", async (req, res, next) => {
       activityId: activity._id,
     });
 
+    const message = await ChatMessageModel.create({
+      chat: chat._id,
+      sender: user._id,
+      body: `${user.name} invited the group to ${title}.`,
+      type: "activity_invite",
+      activity: activity._id,
+    });
+    const createdAt =
+      message.createdAt instanceof Date ? message.createdAt : new Date();
+
+    await ChatModel.findByIdAndUpdate(chat._id, {
+      lastMessage: `Activity invite: ${title}`,
+      time: formatPreviewTime(createdAt),
+    });
+
     const savedActivity = await ActivityModel.findById(activity._id).populate(
       "host",
     );
     const savedPin = await MapPinModel.findById(pin._id).populate("activity");
     const savedChat = await ChatModel.findById(chat._id).populate("members");
+    const adminUserIds = await findAdminUserIds(chat._id);
 
     res.status(201).json({
       activity: serializeActivity(savedActivity, [user]),
       mapPin: serializeMapPin(savedPin),
-      group: serializeChat(savedChat),
+      group: serializeChat(savedChat, undefined, true, adminUserIds),
     });
   } catch (error) {
     next(error);
@@ -292,13 +376,21 @@ router.post("/:id/join", async (req, res, next) => {
     const joiningUsersByActivityId = await getJoiningUsersByActivityId([
       activity,
     ]);
+    const previews = await getLatestChatPreviews([group]);
+    const isAdmin = await isGroupAdmin(user._id, group._id);
+    const adminUserIds = await findAdminUserIds(group._id);
 
     res.json({
       activity: serializeActivity(
         activity,
         joiningUsersByActivityId.get(String(activity._id)) ?? [],
       ),
-      group: serializeChat(group),
+      group: serializeChat(
+        group,
+        getChatPreview(previews, group),
+        isAdmin,
+        adminUserIds,
+      ),
     });
   } catch (error) {
     next(error);

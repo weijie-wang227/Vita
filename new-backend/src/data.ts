@@ -127,7 +127,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Master Chen Wei",
     cover:
       "https://images.unsplash.com/photo-1548957175-84f0f9af659e?w=400&h=220&fit=crop&auto=format",
-    date: "Sat, Jun 28",
+    date: "Sat, Jun 27",
     time: "7:00 AM",
     location: "Fort Canning Park",
     durationMinutes: 60,
@@ -144,7 +144,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Chef Mdm Siti",
     cover:
       "https://images.unsplash.com/photo-1562593028-1fe2d15bde36?w=400&h=220&fit=crop&auto=format",
-    date: "Sun, Jun 29",
+    date: "Sun, Jun 28",
     time: "9:00 AM",
     location: "Chinatown Complex",
     durationMinutes: 150,
@@ -161,7 +161,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Raymond Koh",
     cover:
       "https://images.unsplash.com/photo-1501554728187-ce583db33af7?w=400&h=220&fit=crop&auto=format",
-    date: "Mon, Jun 30",
+    date: "Mon, Jun 29",
     time: "7:30 AM",
     location: "Singapore Botanic Gardens",
     durationMinutes: 90,
@@ -179,7 +179,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 4,
     title: "Morning Walk - East Coast Park",
     host: "David Ng",
-    date: "Sat, Jun 28",
+    date: "Sat, Jun 27",
     time: "7:00 AM",
     location: "East Coast Park",
     durationMinutes: 75,
@@ -193,7 +193,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 5,
     title: "Senior Chess Club",
     host: "James Ho",
-    date: "Fri, Jun 27",
+    date: "Fri, Jun 26",
     time: "2:00 PM",
     location: "Bishan Community Club",
     durationMinutes: 120,
@@ -207,7 +207,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 6,
     title: "Cantonese Cooking Class",
     host: "Mdm Grace Wong",
-    date: "Sun, Jun 29",
+    date: "Sun, Jun 28",
     time: "10:00 AM",
     location: "Toa Payoh CC Kitchen",
     durationMinutes: 120,
@@ -221,7 +221,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 7,
     title: "Kelong Fishing Day Trip",
     host: "Uncle Ravi",
-    date: "Sat, Jun 28",
+    date: "Sat, Jun 27",
     time: "6:00 AM",
     location: "Pulau Ubin Jetty",
     durationMinutes: 360,
@@ -235,7 +235,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 8,
     title: "Book Club - Cafe Meeting",
     host: "Linda Tan",
-    date: "Thu, Jun 26",
+    date: "Fri, Jun 26",
     time: "3:30 PM",
     location: "Tiong Bahru Bakery",
     durationMinutes: 90,
@@ -318,6 +318,16 @@ export const groupChats = [
     time: "",
     unread: 0,
   },
+  {
+    id: 8,
+    name: "Book Club - Cafe Meeting",
+    members: 10,
+    avatar:
+      "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=64&h=64&fit=crop&auto=format",
+    lastMessage: "",
+    time: "",
+    unread: 0,
+  },
 ];
 
 export const mapPins = [
@@ -392,8 +402,8 @@ export const feedPosts = [
       "Beautiful morning at Fort Canning with the Tai Chi group. The energy was just wonderful. See you all next Saturday!",
     image:
       "https://images.unsplash.com/photo-1548957175-84f0f9af659e?w=600&h=400&fit=crop&auto=format",
-    likes: 47,
-    comments: 9,
+    likes: 4,
+    comments: 2,
     activity: "Tai Chi at Fort Canning",
   },
   {
@@ -405,8 +415,8 @@ export const feedPosts = [
       "Caught the golden hour at the Botanic Gardens this morning. Who knew we had such beauty right here in Singapore.",
     image:
       "https://images.unsplash.com/photo-1629185752152-fe65698ddee4?w=600&h=400&fit=crop&auto=format",
-    likes: 93,
-    comments: 18,
+    likes: 3,
+    comments: 2,
     activity: "Botanic Gardens Photography",
   },
   {
@@ -418,8 +428,8 @@ export const feedPosts = [
       "Our cooking class made the most amazing char kway teow from scratch. Everyone left with full stomachs and happy hearts.",
     image:
       "https://images.unsplash.com/photo-1659882751335-43e664461e6d?w=600&h=400&fit=crop&auto=format",
-    likes: 128,
-    comments: 32,
+    likes: 3,
+    comments: 2,
     activity: "Cantonese Cooking Class",
   },
   {
@@ -431,8 +441,78 @@ export const feedPosts = [
       "6km along East Coast Park. Perfect way to start the weekend. Who's joining us next Saturday? Drop your name below!",
     image:
       "https://images.unsplash.com/photo-1501554728187-ce583db33af7?w=600&h=400&fit=crop&auto=format",
-    likes: 61,
-    comments: 14,
+    likes: 3,
+    comments: 2,
     activity: "Morning Walk - East Coast Park",
+  },
+];
+
+export const feedComments = [
+  {
+    postId: 1,
+    handle: "@susanlim",
+    body: "The breathing warm-up was my favourite part. Count me in next week.",
+    minutesAgo: 78,
+  },
+  {
+    postId: 1,
+    handle: "@gracewong",
+    body: "Such a peaceful start to the morning. Thank you for hosting.",
+    minutesAgo: 64,
+  },
+  {
+    postId: 2,
+    handle: "@lindatan",
+    body: "This photo is beautiful, Raymond. The light looks almost golden.",
+    minutesAgo: 210,
+  },
+  {
+    postId: 2,
+    handle: "@meiling",
+    body: "Please share your camera settings at the next session.",
+    minutesAgo: 185,
+  },
+  {
+    postId: 3,
+    handle: "@davidng",
+    body: "I can still smell the wok hei from that class.",
+    minutesAgo: 430,
+  },
+  {
+    postId: 3,
+    handle: "@lindatan",
+    body: "Grace, the sauce tip made all the difference. Mine finally tasted right.",
+    minutesAgo: 415,
+  },
+  {
+    postId: 4,
+    handle: "@peterchia",
+    body: "I am joining again. The sea breeze makes the distance feel easy.",
+    minutesAgo: 790,
+  },
+  {
+    postId: 4,
+    handle: "@raymondkoh",
+    body: "Saving my spot. I will bring a flask this time.",
+    minutesAgo: 770,
+  },
+];
+
+export const feedLikes = [
+  {
+    postId: 1,
+    handles: ["@susanlim", "@gracewong", "@raymondkoh", "@test"],
+  },
+  {
+    postId: 2,
+    handles: ["@lindatan", "@meiling", "@test"],
+  },
+  {
+    postId: 3,
+    handles: ["@lindatan", "@davidng", "@susanlim"],
+  },
+  {
+    postId: 4,
+    handles: ["@peterchia", "@raymondkoh", "@test"],
   },
 ];

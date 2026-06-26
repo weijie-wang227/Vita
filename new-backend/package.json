@@ -1,8 +1,8 @@
 {
-  "name": "mobile-activity-mockup-backend",
+  "name": "vita-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Express API backend for the Mobile Activity App Mockup",
+  "description": "Express API backend for Vita",
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -12,6 +12,8 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1066.0",
+    "@aws-sdk/s3-request-presigner": "^3.1066.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

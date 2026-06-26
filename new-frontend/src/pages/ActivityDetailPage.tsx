@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ActivityCategoryIndicators } from "../components/ActivityCategoryIndicators";
 import { FriendAvatars } from "../components/FriendAvatars";
 import {
@@ -37,22 +38,43 @@ function getActivityById(
 
 export function ActivityDetailPage() {
   const {
-    closeActivity,
     joinActivity,
+    isLoading,
     likedActivityIds,
     premiumActivities,
     profile,
-    selectedActivityId,
     standardActivities,
     toggleActivityLike,
   } = useAppState();
+  const navigate = useNavigate();
+  const { activityId } = useParams();
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const activities: Activity[] = [...premiumActivities, ...standardActivities];
-  const activity = getActivityById(activities, selectedActivityId);
+  const activity = getActivityById(activities, Number(activityId));
 
   if (!activity) {
-    return null;
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <div className="flex items-center gap-3 px-4 pt-5 pb-3">
+          <button
+            onClick={() => navigate("/activities")}
+            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+            aria-label="Back to activities"
+          >
+            <ChevronLeft size={17} className="text-foreground" />
+          </button>
+          <h2 className="text-base font-semibold text-foreground flex-1 truncate">
+            Activity
+          </h2>
+        </div>
+        <div className="flex flex-1 items-center justify-center px-8 text-center">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {isLoading ? "Loading activity..." : "Activity not found."}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const liked = Boolean(likedActivityIds[activity.id]);
@@ -81,7 +103,7 @@ export function ActivityDetailPage() {
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center gap-3 px-4 pt-5 pb-3">
         <button
-          onClick={closeActivity}
+          onClick={() => navigate("/activities")}
           className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
           aria-label="Back to activities"
         >
@@ -197,12 +219,14 @@ export function ActivityDetailPage() {
                 </p>
                 <FriendAvatars friends={activity.joiningFriends} max={5} />
               </div>
+              {/*
               <div className="flex items-center gap-1">
                 <Star size={12} fill="var(--brand-yellow)" stroke="none" />
                 <span className="text-sm font-bold text-foreground">
                   {activity.rating}
                 </span>
               </div>
+              */}
             </div>
             <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
               A small-group activity for meeting nearby friends and enjoying

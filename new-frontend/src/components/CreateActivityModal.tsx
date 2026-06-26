@@ -68,6 +68,7 @@ export function CreateActivityModal({ open, onClose }: CreateActivityModalProps)
         )}
 
         <ActivityDetailsFields
+          adminGroups={activityForm.adminGroups}
           form={activityForm.form}
           onCategoryToggle={activityForm.toggleCategory}
           onFieldChange={activityForm.updateField}
