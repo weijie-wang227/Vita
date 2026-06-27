@@ -23,7 +23,18 @@ const tokenDurationSeconds = 60 * 60 * 24 * 7;
 const passwordKeyLength = 64;
 
 function getAuthSecret() {
-  return process.env.AUTH_SECRET?.trim() || "vita-local-development-secret";
+  const authSecret =
+    process.env.AUTH_SECRET?.trim() || process.env.JWT_SECRET?.trim();
+
+  if (authSecret) {
+    return authSecret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET is required in production.");
+  }
+
+  return "vita-local-development-secret";
 }
 
 function hashPassword(password: string, salt: string) {

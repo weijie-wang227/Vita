@@ -1,164 +1,413 @@
-import { Router } from 'express'
-import { Post, Comment } from '../models'
-import { authenticateToken, type AuthRequest } from '../middleware/auth'
-import { getFriendIdsForUser } from '../services/helper'
-import { isValidId } from '../services/helper'
+import { Router } from "express";
+import { findAuthenticatedUser } from "../auth.js";
+import {
+  ChatModel,
+  CommentModel,
+  FeedPostModel,
+  FriendshipModel,
+  LikeModel,
+} from "../models/VitaData.js";
+import { serializeComment, serializeFeedPost } from "../serializers.js";
 
-const feedRouter = Router()
+const router = Router();
+const maxCaptionLength = 1200;
+const maxCommentLength = 500;
+const maxImageUrlLength = 4096;
 
-// GET /api/feed
-// Get posts from current user + friends
-feedRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.userId
+function asObject(doc: Record<string, any>) {
+  return typeof doc.toObject === "function" ? doc.toObject() : doc;
+}
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' })
-    }
+function getString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
 
-    if (!isValidId(userId)) {
-      return res.status(400).json({ error: 'Invalid user ID' })
-    }
+async function nextMockId() {
+  const lastPost = await FeedPostModel.findOne()
+    .sort({ mockId: -1 })
+    .select("mockId");
 
-    const friendIds = await getFriendIdsForUser(userId)
+  return (lastPost?.mockId ?? 0) + 1;
+}
 
-    const visibleUserIds = [userId, ...friendIds]
+async function findVisibleUserIds(user: Record<string, any>) {
+  const friendships = await FriendshipModel.find({ userId: user._id }).select(
+    "friendId",
+  );
 
-    const posts = await Post.find({
-      userId: { $in: visibleUserIds },
-    })
-      .sort({ createdAt: -1 })
-      .populate('userId', 'name avatarUrl bio')
-      .populate('classId', 'title imageUrl date time location instructor')
+  return [
+    user._id,
+    ...friendships.map((friendship: Record<string, any>) => friendship.friendId),
+  ];
+}
 
-    res.json(posts)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to fetch feed' })
+async function findVisibleFeedPost(postId: number, user: Record<string, any>) {
+  if (!Number.isInteger(postId)) {
+    return null;
   }
-})
 
-// POST /api/feed/post
-// Create a new post
-feedRouter.post('/post', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.userId
-    const { imageUrl, title, description, classId } = req.body
+  const visibleUserIds = await findVisibleUserIds(user);
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' })
-    }
+  return FeedPostModel.findOne({
+    mockId: postId,
+    user: { $in: visibleUserIds },
+  })
+    .populate("user")
+    .populate("activity")
+    .populate("group");
+}
 
-    if (!isValidId(userId)) {
-      return res.status(400).json({ error: 'Invalid user ID' })
-    }
+function getPostLikeCount(post: Record<string, any>) {
+  const item = asObject(post);
 
-    if (!description || typeof description !== 'string') {
-      return res.status(400).json({ error: 'description is required' })
-    }
+  return Number(item.likesCount ?? item.likes ?? 0);
+}
 
-    if (!title || typeof title !== 'string') {
-      return res.status(400).json({ error: 'Title is required' })
-    }
+async function ensurePostLikeCount(post: Record<string, any>) {
+  const item = asObject(post);
 
-    if (classId && !isValidId(classId)) {
-      return res.status(400).json({ error: 'Invalid class ID' })
-    }
-
-    const post = await Post.create({
-      userId,
-      imageUrl,
-      description,
-      title,
-      classId: classId || undefined,
-    })
-
-    const populatedPost = await Post.findById(post._id)
-      .populate('userId', 'name avatarUrl bio')
-      .populate('classId', 'title imageUrl date time location instructor')
-
-    res.status(201).json(populatedPost)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to create post' })
+  if (typeof item.likesCount === "number") {
+    return;
   }
-})
 
-// GET /api/feed/comments/:id
-// Get comments for one post
-feedRouter.get('/comments/:id', authenticateToken, async (req: AuthRequest, res) => {
+  await FeedPostModel.findByIdAndUpdate(item._id, {
+    likesCount: Number(item.likes ?? 0),
+  });
+}
+
+async function adjustPostLikeCount(postObjectId: unknown, delta: number) {
+  const updatedPost = await FeedPostModel.findByIdAndUpdate(
+    postObjectId,
+    { $inc: { likesCount: delta, likes: delta } },
+    { new: true },
+  ).select("likes likesCount");
+
+  return updatedPost ? getPostLikeCount(updatedPost) : 0;
+}
+
+router.get("/", async (req, res, next) => {
   try {
-    const postId = req.params.id
+    const user = await findAuthenticatedUser(req.headers.authorization);
 
-    if (!postId || Array.isArray(postId) || !isValidId(postId)) {
-      return res.status(400).json({ error: 'Invalid post ID' })
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
     }
 
-    const post = await Post.findById(postId)
+    const visibleUserIds = await findVisibleUserIds(user);
+    const posts = await FeedPostModel.find({ user: { $in: visibleUserIds } })
+      .populate("user")
+      .populate("activity")
+      .populate("group")
+      .sort({ mockId: 1 });
+    const postIds = posts.map((post: Record<string, any>) => asObject(post)._id);
+    const commentCounts = await CommentModel.aggregate([
+      { $match: { post: { $in: postIds } } },
+      { $group: { _id: "$post", count: { $sum: 1 } } },
+    ]);
+    const commentCountsByPostId = new Map<string, number>(
+      commentCounts.map((item: Record<string, any>) => [
+        String(item._id),
+        item.count ?? 0,
+      ]),
+    );
+    const currentUserLikes = await LikeModel.find({
+      post: { $in: postIds },
+      user: user._id,
+    }).select("post");
+    const likedPostIds = new Set(
+      currentUserLikes.map((like: Record<string, any>) =>
+        String(asObject(like).post?._id ?? asObject(like).post),
+      ),
+    );
+    const serializedPosts = posts.map((post: Record<string, any>) => {
+      const item = asObject(post);
+      const storedCommentCount = Number(item.comments ?? 0);
+      const commentCount =
+        commentCountsByPostId.get(String(item._id)) ?? storedCommentCount;
+      const likeCount = getPostLikeCount(post);
+
+      return serializeFeedPost(post, {
+        commentCount,
+        likeCount,
+        likedByCurrentUser: likedPostIds.has(String(item._id)),
+      });
+    });
+
+    serializedPosts.sort((a, b) => {
+      const aIsFresh = a.time === "Just now";
+      const bIsFresh = b.time === "Just now";
+
+      if (aIsFresh && bIsFresh) {
+        return b.id - a.id;
+      }
+
+      if (aIsFresh) {
+        return -1;
+      }
+
+      if (bIsFresh) {
+        return 1;
+      }
+
+      return 0;
+    });
+
+    res.json(serializedPosts);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const caption = getString(req.body?.caption);
+    const imageUrl = getString(req.body?.image ?? req.body?.imageUrl);
+    const groupId =
+      req.body?.groupId === undefined || req.body?.groupId === null
+        ? null
+        : Number(req.body.groupId);
+
+    if (!caption) {
+      res.status(400).json({ message: "Post caption cannot be empty." });
+      return;
+    }
+
+    if (caption.length > maxCaptionLength) {
+      res.status(400).json({ message: "Post caption is too long." });
+      return;
+    }
+
+    if (imageUrl && imageUrl.length > maxImageUrlLength) {
+      res.status(400).json({ message: "Image URL is too long." });
+      return;
+    }
+
+    if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
+      res.status(400).json({ message: "Image must be a valid URL." });
+      return;
+    }
+
+    if (groupId !== null && !Number.isInteger(groupId)) {
+      res.status(400).json({ message: "Choose a valid group." });
+      return;
+    }
+
+    const group =
+      groupId === null
+        ? null
+        : await ChatModel.findOne({ mockId: groupId, members: user._id });
+
+    if (groupId !== null && !group) {
+      res.status(400).json({
+        message: "You can only reference groups you have joined.",
+      });
+      return;
+    }
+
+    const post = await FeedPostModel.create({
+      mockId: await nextMockId(),
+      user: user._id,
+      group: group?._id,
+      time: "Just now",
+      caption,
+      image: imageUrl || undefined,
+      likes: 0,
+      likesCount: 0,
+      comments: 0,
+    });
+    const savedPost = await FeedPostModel.findById(post._id)
+      .populate("user")
+      .populate("activity")
+      .populate("group");
+
+    if (!savedPost) {
+      res.status(404).json({ message: "Post not found" });
+      return;
+    }
+
+    res.status(201).json(serializeFeedPost(savedPost));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/likes", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const postId = Number(req.params.id);
+    const post = await findVisibleFeedPost(postId, user);
 
     if (!post) {
-      return res.status(404).json({ error: 'Post not found' })
+      res.status(404).json({ message: "Post not found" });
+      return;
     }
 
-    const comments = await Comment.find({
-      postId,
-    })
-      .sort({ createdAt: 1 })
-      .populate('userId', 'name avatarUrl bio')
+    const result = await LikeModel.updateOne(
+      { post: post._id, user: user._id },
+      { $setOnInsert: { post: post._id, user: user._id } },
+      { upsert: true },
+    );
+    const createdLike = Boolean(
+      (result as Record<string, any>).upsertedCount ||
+        (result as Record<string, any>).upsertedId,
+    );
+    let likeCount = getPostLikeCount(post);
 
-    res.json(comments)
+    if (createdLike) {
+      await ensurePostLikeCount(post);
+      likeCount = await adjustPostLikeCount(post._id, 1);
+    }
+
+    res.status(201).json({
+      postId: post.mockId,
+      likes: likeCount,
+      likesCount: likeCount,
+      likedByMe: true,
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to fetch comments' })
+    next(error);
   }
-})
+});
 
-// POST /api/feed/comment/:id
-// Add comment to one post
-feedRouter.post('/comment/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.delete("/:id/likes", async (req, res, next) => {
   try {
-    const userId = req.userId
-    const postId = req.params.id
-    const { content } = req.body
+    const user = await findAuthenticatedUser(req.headers.authorization);
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' })
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
     }
 
-    if (!isValidId(userId)) {
-      return res.status(400).json({ error: 'Invalid user ID' })
-    }
-
-    if (!postId || Array.isArray(postId) || !isValidId(postId)) {
-      return res.status(400).json({ error: 'Invalid post ID' })
-    }
-
-    if (!content || typeof content !== 'string') {
-      return res.status(400).json({ error: 'Comment content is required' })
-    }
-
-    const post = await Post.findById(postId)
+    const postId = Number(req.params.id);
+    const post = await findVisibleFeedPost(postId, user);
 
     if (!post) {
-      return res.status(404).json({ error: 'Post not found' })
+      res.status(404).json({ message: "Post not found" });
+      return;
     }
 
-    const comment = await Comment.create({
-      userId,
-      postId,
-      content,
-    })
+    const result = await LikeModel.deleteOne({ post: post._id, user: user._id });
+    let likeCount = getPostLikeCount(post);
 
-    const populatedComment = await Comment.findById(comment._id).populate(
-      'userId',
-      'name avatarUrl bio',
-    )
+    if (result.deletedCount > 0) {
+      await ensurePostLikeCount(post);
+      likeCount = await adjustPostLikeCount(post._id, -1);
+    }
 
-    res.status(201).json(populatedComment)
+    res.json({
+      postId: post.mockId,
+      likes: likeCount,
+      likesCount: likeCount,
+      likedByMe: false,
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to create comment' })
+    next(error);
   }
-})
+});
 
-export default feedRouter;
+router.get("/:id/comments", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const postId = Number(req.params.id);
+    const post = await findVisibleFeedPost(postId, user);
+
+    if (!post) {
+      res.status(404).json({ message: "Post not found" });
+      return;
+    }
+
+    const comments = await CommentModel.find({ post: post._id })
+      .populate("post")
+      .populate("user")
+      .sort({ createdAt: 1, _id: 1 })
+      .limit(100);
+    const commentCount = await CommentModel.countDocuments({ post: post._id });
+
+    res.json({
+      comments: comments.map(serializeComment),
+      commentCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/comments", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const postId = Number(req.params.id);
+    const post = await findVisibleFeedPost(postId, user);
+
+    if (!post) {
+      res.status(404).json({ message: "Post not found" });
+      return;
+    }
+
+    const body = getString(req.body?.body ?? req.body?.comment);
+
+    if (!body) {
+      res.status(400).json({ message: "Comment cannot be empty." });
+      return;
+    }
+
+    if (body.length > maxCommentLength) {
+      res.status(400).json({ message: "Comment is too long." });
+      return;
+    }
+
+    const comment = await CommentModel.create({
+      post: post._id,
+      user: user._id,
+      body,
+    });
+    const savedComment = await CommentModel.findById(comment._id)
+      .populate("post")
+      .populate("user");
+
+    if (!savedComment) {
+      res.status(404).json({ message: "Comment not found" });
+      return;
+    }
+
+    const commentCount = await CommentModel.countDocuments({ post: post._id });
+
+    await FeedPostModel.findByIdAndUpdate(post._id, {
+      comments: commentCount,
+    });
+
+    res.status(201).json({
+      comment: serializeComment(savedComment),
+      commentCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;
