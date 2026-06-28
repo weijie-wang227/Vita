@@ -9,7 +9,7 @@ import { useLocation, useNavigate } from "react-router";
 import {
   VidaProgressLogo,
   type VidaLogoLevels,
-} from "../components/vidaProgressLogo";
+} from "../components/VidaProgressLogo";
 import type { AppTab } from "../state";
 
 type NavItem = {
