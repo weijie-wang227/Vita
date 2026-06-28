@@ -1,8 +1,8 @@
 {
-  "name": "vita-backend",
+  "name": "vida-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Express API backend for Vita",
+  "description": "Express API backend for vida",
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",

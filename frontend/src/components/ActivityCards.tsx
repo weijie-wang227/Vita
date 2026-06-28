@@ -4,9 +4,11 @@ import { FriendAvatars } from "./FriendAvatars";
 import {
   categoriesForActivity,
   categoryIcon,
+  formatActivityDate,
+  formatActivityTime,
   formatCredits,
   primaryActivityCategory,
-  vitaCategoryColor,
+  vidaCategoryColor,
 } from "../lib/activityPresentation";
 import type { Activity, PremiumActivity } from "../lib/types";
 import { useAppState } from "../state";
@@ -90,7 +92,8 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
           <div className="flex items-center gap-1">
             <Clock size={9} className="text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground">
-              {activity.date} / {activity.time}
+              {formatActivityDate(activity.startsAt)} /{" "}
+              {formatActivityTime(activity.startsAt)}
             </span>
           </div>
           {/*
@@ -122,7 +125,7 @@ export function StandardRow({ activity }: { activity: Activity }) {
   const { openActivity } = useAppState();
   const categories = categoriesForActivity(activity.categories);
   const primaryCategory = primaryActivityCategory(activity.categories);
-  const primaryColor = vitaCategoryColor[primaryCategory];
+  const primaryColor = vidaCategoryColor[primaryCategory];
 
   return (
     <button
@@ -155,7 +158,7 @@ export function StandardRow({ activity }: { activity: Activity }) {
             </span>
             <span className="text-muted-foreground opacity-40">/</span>
             <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              {activity.time}
+              {formatActivityTime(activity.startsAt)}
             </span>
           </div>
           <div className="mt-1">

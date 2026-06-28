@@ -1,6 +1,13 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  AlertCircle,
   AtSign,
   CheckCircle2,
   Check,
@@ -17,9 +24,10 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { checkHandleAvailability } from "../api/profile";
+import { checkHandleAvailability, searchFriendsByHandle } from "../api/profile";
 import { uploadImageToR2 } from "../api/uploads";
 import { BaseSearchBar } from "../components/BaseSearchBar";
+import type { FriendSearchResult } from "../lib/types";
 import { useAppState } from "../state";
 
 const maxProfileImageBytes = 3 * 1024 * 1024;
@@ -32,7 +40,7 @@ function normalizeProfileHandle(value: string, fallback: string) {
     .replace(/^@+/, "")
     .replace(/[^a-z0-9_]+/g, "");
 
-  return `@${(base || "vitauser").slice(0, 24)}`;
+  return `@${(base || "vidauser").slice(0, 24)}`;
 }
 
 function hasHandleCharacters(value: string) {
@@ -51,6 +59,7 @@ function readFileAsDataUrl(file: File) {
 
 export function ProfilePage() {
   const {
+    addFriend,
     authUser,
     clearFriendInviteResult,
     friends,
@@ -65,6 +74,20 @@ export function ProfilePage() {
   } = useAppState();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [shareFeedback, setShareFeedback] = useState("");
+  const [addFriendSearchQuery, setAddFriendSearchQuery] = useState("");
+  const [debouncedAddFriendSearchQuery, setDebouncedAddFriendSearchQuery] =
+    useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState<
+    FriendSearchResult[]
+  >([]);
+  const [friendSearchError, setFriendSearchError] = useState<string | null>(
+    null,
+  );
+  const [isSearchingFriends, setIsSearchingFriends] = useState(false);
+  const [addingFriendId, setAddingFriendId] = useState<string | null>(null);
+  const [addFriendFeedback, setAddFriendFeedback] = useState<string | null>(
+    null,
+  );
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [debouncedFriendSearchQuery, setDebouncedFriendSearchQuery] =
     useState("");
@@ -87,15 +110,12 @@ export function ProfilePage() {
           authUser.id,
         )}`
       : "";
-  const qrFeedback = shareFeedback || friendInviteFeedback;
+  const qrFeedback = shareFeedback;
+  const activeAddFriendSearchQuery = debouncedAddFriendSearchQuery.trim();
   const activeFriendSearchQuery = debouncedFriendSearchQuery.toLowerCase();
   const filteredFriends = activeFriendSearchQuery
     ? friends.filter((friend) =>
-        [
-          friend.name,
-          friend.handle,
-          friend.joined.join(" "),
-        ]
+        [friend.name, friend.handle, friend.joined.join(" ")]
           .join(" ")
           .toLowerCase()
           .includes(activeFriendSearchQuery),
@@ -110,6 +130,49 @@ export function ProfilePage() {
         : handleStatus === "taken"
           ? "That handle is already in use. Please choose another."
           : "";
+  const friendHandles = new Set(friends.map((friend) => friend.handle));
+
+  useEffect(() => {
+    if (!activeAddFriendSearchQuery) {
+      setFriendSearchResults([]);
+      setFriendSearchError(null);
+      setIsSearchingFriends(false);
+      return;
+    }
+
+    let ignore = false;
+
+    setIsSearchingFriends(true);
+    setFriendSearchError(null);
+
+    searchFriendsByHandle(activeAddFriendSearchQuery)
+      .then((results) => {
+        if (ignore) {
+          return;
+        }
+
+        setFriendSearchResults(results);
+      })
+      .catch((error) => {
+        if (ignore) {
+          return;
+        }
+
+        setFriendSearchResults([]);
+        setFriendSearchError(
+          error instanceof Error ? error.message : "Unable to search users.",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsSearchingFriends(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeAddFriendSearchQuery]);
 
   const openEditProfile = () => {
     setEditName(profile.name);
@@ -235,8 +298,8 @@ export function ProfilePage() {
     }
 
     const shareData = {
-      title: `${profile.name} on Vita`,
-      text: `Add ${profile.name} as a friend on Vita.`,
+      title: `${profile.name} on vida`,
+      text: `Add ${profile.name} as a friend on vida.`,
       url: inviteUrl,
     };
 
@@ -260,6 +323,24 @@ export function ProfilePage() {
       } catch {
         setShareFeedback(inviteUrl);
       }
+    }
+  };
+
+  const handleAddDiscoveredFriend = async (friend: FriendSearchResult) => {
+    setAddingFriendId(friend.id);
+    setAddFriendFeedback(null);
+
+    try {
+      const addedFriend = await addFriend(friend.id);
+
+      setShowProfileFriends(false);
+      setAddFriendFeedback(`${addedFriend.name} added successfully.`);
+    } catch (error) {
+      setAddFriendFeedback(
+        error instanceof Error ? error.message : "Unable to add friend.",
+      );
+    } finally {
+      setAddingFriendId(null);
     }
   };
 
@@ -370,7 +451,7 @@ export function ProfilePage() {
         <div className="px-4 pb-4">
           <div className="flex bg-secondary rounded-xl p-1 mb-4">
             {[
-              { id: false, icon: <QrCode size={13} />, label: "My QR Code" },
+              { id: false, icon: <QrCode size={13} />, label: "Add Friends" },
               { id: true, icon: <Users size={13} />, label: "Friends" },
             ].map((item) => (
               <button
@@ -389,22 +470,110 @@ export function ProfilePage() {
           </div>
 
           {!showProfileFriends ? (
-            <div className="flex flex-col items-center bg-card rounded-2xl p-5 border border-border">
-              <p className="text-xs text-muted-foreground mb-4 text-center">
+            <div className="flex flex-col bg-card rounded-2xl p-5 border border-border">
+              <BaseSearchBar
+                value={addFriendSearchQuery}
+                onValueChange={(value) => {
+                  setAddFriendSearchQuery(value);
+                  setAddFriendFeedback(null);
+                }}
+                onDebouncedQueryChange={setDebouncedAddFriendSearchQuery}
+                placeholder="Search handles"
+                ariaLabel="Search users by handle"
+                className="flex h-10 items-center gap-2 rounded-xl bg-secondary px-3"
+                inputClassName="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                iconSize={17}
+                clearable
+                minLength={2}
+              />
+              {activeAddFriendSearchQuery ? (
+                <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                  {isSearchingFriends ? (
+                    <div className="flex items-center justify-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+                      <Loader2 size={13} className="animate-spin" />
+                      Searching
+                    </div>
+                  ) : friendSearchError ? (
+                    <p className="px-3 py-4 text-center text-xs text-destructive-foreground">
+                      {friendSearchError}
+                    </p>
+                  ) : friendSearchResults.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                      No discoverable users found.
+                    </p>
+                  ) : (
+                    friendSearchResults.map((friend, index) => {
+                      const alreadyFriend = friendHandles.has(friend.handle);
+                      const isAdding = addingFriendId === friend.id;
+
+                      return (
+                        <div
+                          key={friend.id}
+                          className={`flex items-center gap-3 px-3 py-2.5 ${
+                            index < friendSearchResults.length - 1
+                              ? "border-b border-border"
+                              : ""
+                          }`}
+                        >
+                          <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
+                            <img
+                              src={friend.avatar}
+                              alt={friend.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] font-semibold text-foreground">
+                              {friend.name}
+                            </p>
+                            <p className="truncate text-[10px] text-muted-foreground">
+                              {friend.handle}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddDiscoveredFriend(friend)}
+                            disabled={alreadyFriend || isAdding}
+                            className="flex h-8 items-center gap-1 rounded-full bg-accent px-3 text-[11px] font-bold text-accent-foreground disabled:bg-secondary disabled:text-muted-foreground"
+                          >
+                            {isAdding ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : alreadyFriend ? (
+                              <Check size={12} />
+                            ) : (
+                              <UserPlus size={12} />
+                            )}
+                            {alreadyFriend ? "Added" : "Add"}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ) : null}
+              {addFriendFeedback ? (
+                <p
+                  className="mt-2 max-w-full break-words text-center text-[11px] text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {addFriendFeedback}
+                </p>
+              ) : null}
+              <p className="mt-5 text-xs text-muted-foreground mb-4 text-center">
                 Scan to add {profile.name} as a friend
               </p>
-              <div className="w-40 h-40 bg-white rounded-xl p-2.5 mb-4">
+              <div className="mx-auto w-40 h-40 bg-white rounded-xl p-2.5 mb-4">
                 {inviteUrl ? (
                   <QRCodeSVG
                     value={inviteUrl}
                     size={140}
                     level="M"
                     marginSize={2}
-                    title={`${profile.name} Vita friend invite`}
+                    title={`${profile.name} vida friend invite`}
                   />
                 ) : null}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <div className="w-6 h-6 rounded-full overflow-hidden">
                   <img
                     src={profile.avatar}
@@ -439,14 +608,6 @@ export function ProfilePage() {
             </div>
           ) : (
             <div className="bg-card rounded-2xl border border-border overflow-hidden">
-              {friendInviteFeedback ? (
-                <p
-                  className="border-b border-border px-3 py-2 text-center text-[11px] text-muted-foreground"
-                  aria-live="polite"
-                >
-                  {friendInviteFeedback}
-                </p>
-              ) : null}
               <BaseSearchBar
                 value={friendSearchQuery}
                 onValueChange={setFriendSearchQuery}
@@ -490,7 +651,10 @@ export function ProfilePage() {
                     className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
                     aria-label={`Message ${friend.name}`}
                   >
-                    <MessageCircle size={12} className="text-muted-foreground" />
+                    <MessageCircle
+                      size={12}
+                      className="text-muted-foreground"
+                    />
                   </button>
                 </div>
               ))}
@@ -527,6 +691,31 @@ export function ProfilePage() {
             </p>
             <p className="text-xs text-muted-foreground">
               {friendInviteFriend.handle}
+            </p>
+            <button
+              type="button"
+              onClick={clearFriendInviteResult}
+              className="mt-5 h-11 w-full rounded-2xl bg-accent text-sm font-bold text-accent-foreground"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {friendInviteFeedback && !friendInviteFriend ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[320px] rounded-3xl border border-border bg-card p-5 text-center shadow-2xl shadow-black/25">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/15">
+              <AlertCircle size={26} className="text-destructive" />
+            </div>
+            <h2 className="text-lg font-bold text-foreground">
+              {friendInviteFeedback === "Friend not found."
+                ? "Friend not found"
+                : "Unable to add friend"}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {friendInviteFeedback}
             </p>
             <button
               type="button"

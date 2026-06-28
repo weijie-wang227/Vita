@@ -1,23 +1,23 @@
 import type {
-  VitaLogoLevels,
-  VitaLogoPortion,
-} from "../components/VitaProgressLogo";
+  VidaLogoLevels,
+  vidaLogoPortion,
+} from "../components/vidaProgressLogo";
 
-export const brandLogoLevels: VitaLogoLevels = {
+export const brandLogoLevels: VidaLogoLevels = {
   physical: 100,
   social: 100,
   cognitive: 100,
   creative: 100,
 };
 
-export const emptyLogoLevels: VitaLogoLevels = {
+export const emptyLogoLevels: VidaLogoLevels = {
   physical: 0,
   social: 0,
   cognitive: 0,
   creative: 0,
 };
 
-export const logoPortionOrder: VitaLogoPortion[] = [
+export const logoPortionOrder: vidaLogoPortion[] = [
   "physical",
   "social",
   "cognitive",

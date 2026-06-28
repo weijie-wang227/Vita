@@ -7,10 +7,8 @@ import {
   UserRound,
   UserPlus,
 } from "lucide-react";
-import { VitaProgressLogo } from "../components/VitaProgressLogo";
 import { useAppState } from "../state";
 import { AppShell } from "./AppShell";
-import { brandLogoLevels } from "./logoState";
 
 type AuthMode = "signin" | "signup";
 
@@ -21,12 +19,12 @@ function AuthLoadingScreen() {
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <div className="flex flex-col items-center gap-4 text-sm text-muted-foreground">
-        <div className="vita-auth-logo">
-          <VitaProgressLogo levels={brandLogoLevels} />
+        <div className="vida-auth-logo">
+          <img src="/logo.png" alt="Vida" className="vida-logo-image" />
         </div>
         <div className="flex items-center gap-2">
           <Loader2 size={16} className="animate-spin text-accent" />
-          Opening Vita
+          Opening Vida
         </div>
       </div>
     </div>
@@ -54,7 +52,9 @@ function AuthModeTabs({
             type="button"
             onClick={() => onModeChange(id)}
             className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-              active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              active
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground"
             }`}
           >
             <Icon size={15} />
@@ -94,7 +94,9 @@ function AuthScreen() {
         await signIn({ email, password });
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Please try again.");
+      setLocalError(
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -105,16 +107,16 @@ function AuthScreen() {
       className="min-h-screen bg-background"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      <div className="vita-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden px-5 py-6">
+      <div className="vida-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden px-5 py-6">
         <div className="relative flex min-h-[calc(100vh-3rem)] flex-col justify-center">
           <div className="mb-7">
-            <div className="vita-auth-brand">
-              <div className="vita-auth-logo">
-                <VitaProgressLogo levels={brandLogoLevels} />
+            <div className="vida-auth-brand">
+              <div className="vida-auth-logo">
+                <img src="/logo.png" alt="Vida" className="vida-logo-image" />
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
-                  Vita
+                  Vida
                 </p>
                 <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground">
                   {isSignup ? "Create your account" : "Welcome back"}

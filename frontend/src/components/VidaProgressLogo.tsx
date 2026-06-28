@@ -6,20 +6,20 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { VitaCategory } from "../lib/types";
+import type { vidaCategory } from "../lib/types";
 
-export type VitaLogoPortion = VitaCategory;
+export type VidaLogoPortion = vidaCategory;
 
-export type VitaLogoLevels = Record<VitaLogoPortion, number>;
+export type VidaLogoLevels = Record<VidaLogoPortion, number>;
 
-type VitaProgressLogoProps = {
-  levels: VitaLogoLevels;
-  onPortionClick?: (portion: VitaLogoPortion) => void;
+type VidaProgressLogoProps = {
+  levels: VidaLogoLevels;
+  onPortionClick?: (portion: VidaLogoPortion) => void;
   size?: "compact" | "expanded";
 };
 
 type PortionConfig = {
-  id: VitaLogoPortion;
+  id: VidaLogoPortion;
   label: string;
   path: string;
   gradient: string[];
@@ -61,15 +61,15 @@ function clampLevel(value: number) {
   return Math.max(0, Math.min(100, value));
 }
 
-export function VitaProgressLogo({
+export function VidaProgressLogo({
   levels,
   onPortionClick,
   size = "compact",
-}: VitaProgressLogoProps) {
+}: VidaProgressLogoProps) {
   const idPrefix = useId().replace(/:/g, "");
 
   const handleKeyDown =
-    (portion: VitaLogoPortion) => (event: KeyboardEvent<SVGGElement>) => {
+    (portion: VidaLogoPortion) => (event: KeyboardEvent<SVGGElement>) => {
       if (!onPortionClick) {
         return;
       }
@@ -82,14 +82,14 @@ export function VitaProgressLogo({
 
   return (
     <div
-      className={`vita-progress-logo vita-progress-logo--${size} ${
-        onPortionClick ? "vita-progress-logo--interactive" : ""
+      className={`vida-progress-logo vida-progress-logo--${size} ${
+        onPortionClick ? "vida-progress-logo--interactive" : ""
       }`}
     >
       <svg
         viewBox="0 0 240 240"
-        aria-label="Vita progress logo"
-        className="vita-progress-logo__svg"
+        aria-label="vida progress logo"
+        className="vida-progress-logo__svg"
         role="img"
       >
         <defs>
@@ -136,7 +136,7 @@ export function VitaProgressLogo({
           return (
             <g
               key={portion.id}
-              className="vita-progress-logo__portion"
+              className="vida-progress-logo__portion"
               filter={`url(#${idPrefix}-portion-shadow)`}
               onClick={() => onPortionClick?.(portion.id)}
               onKeyDown={handleKeyDown(portion.id)}
@@ -145,7 +145,7 @@ export function VitaProgressLogo({
               aria-label={`${portion.label} ${Math.round(level)} percent full`}
             >
               <title>{`${portion.label} ${Math.round(level)}% full`}</title>
-              <path d={portion.path} className="vita-progress-logo__empty" />
+              <path d={portion.path} className="vida-progress-logo__empty" />
               <g clipPath={`url(#${idPrefix}-${portion.id}-clip)`}>
                 <rect
                   x="0"
@@ -153,20 +153,20 @@ export function VitaProgressLogo({
                   width="240"
                   height={fillHeight}
                   fill={`url(#${idPrefix}-${portion.id}-gradient)`}
-                  className="vita-progress-logo__fill"
+                  className="vida-progress-logo__fill"
                 />
               </g>
-              <path d={portion.path} className="vita-progress-logo__outline" />
+              <path d={portion.path} className="vida-progress-logo__outline" />
             </g>
           );
         })}
       </svg>
 
-      <div className="vita-progress-logo__icons" aria-hidden="true">
+      <div className="vida-progress-logo__icons" aria-hidden="true">
         {portions.map(({ id, Icon }) => (
           <Icon
             key={id}
-            className={`vita-progress-logo__icon vita-progress-logo__icon--${id}`}
+            className={`vida-progress-logo__icon vida-progress-logo__icon--${id}`}
           />
         ))}
       </div>

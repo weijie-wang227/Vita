@@ -20,6 +20,24 @@ function ResizeMap() {
   return null;
 }
 
+function CenterSelectedLocation({
+  selectedPosition,
+}: {
+  selectedPosition: [number, number] | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedPosition) {
+      map.setView(selectedPosition, Math.max(map.getZoom(), 14), {
+        animate: true,
+      });
+    }
+  }, [map, selectedPosition]);
+
+  return null;
+}
+
 function LocationPicker({
   selectedPosition,
   onSelectPosition,
@@ -145,6 +163,7 @@ export function LocationSection({
           zoomControl={false}
         >
           <ResizeMap />
+          <CenterSelectedLocation selectedPosition={selectedPosition} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

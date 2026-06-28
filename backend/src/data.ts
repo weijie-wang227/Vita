@@ -1,4 +1,4 @@
-export type VitaCategory = "physical" | "social" | "cognitive" | "creative";
+export type vidaCategory = "physical" | "social" | "cognitive" | "creative";
 
 export type FriendSeed = {
   id: number;
@@ -12,14 +12,13 @@ type ActivityBase = {
   id: number;
   title: string;
   host: string;
-  date: string;
-  time: string;
+  startsAt: string;
   location: string;
   durationMinutes: number;
   spots: number;
   credits: number;
   rating: number;
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   joiningFriends: FriendSeed[];
 };
 
@@ -118,8 +117,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Master Chen Wei",
     cover:
       "https://images.unsplash.com/photo-1548957175-84f0f9af659e?w=400&h=220&fit=crop&auto=format",
-    date: "Sat, Jun 27",
-    time: "7:00 AM",
+    startsAt: "2026-06-27T07:00:00+08:00",
     location: "Fort Canning Park",
     durationMinutes: 60,
     spots: 6,
@@ -135,8 +133,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Chef Mdm Siti",
     cover:
       "https://images.unsplash.com/photo-1562593028-1fe2d15bde36?w=400&h=220&fit=crop&auto=format",
-    date: "Sun, Jun 28",
-    time: "9:00 AM",
+    startsAt: "2026-06-28T09:00:00+08:00",
     location: "Chinatown Complex",
     durationMinutes: 150,
     spots: 4,
@@ -152,8 +149,7 @@ export const premiumActivities: PremiumActivitySeed[] = [
     host: "Raymond Koh",
     cover:
       "https://images.unsplash.com/photo-1501554728187-ce583db33af7?w=400&h=220&fit=crop&auto=format",
-    date: "Mon, Jun 29",
-    time: "7:30 AM",
+    startsAt: "2026-06-29T07:30:00+08:00",
     location: "Singapore Botanic Gardens",
     durationMinutes: 90,
     spots: 8,
@@ -170,8 +166,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 4,
     title: "Morning Walk - East Coast Park",
     host: "David Ng",
-    date: "Sat, Jun 27",
-    time: "7:00 AM",
+    startsAt: "2026-06-27T07:00:00+08:00",
     location: "East Coast Park",
     durationMinutes: 75,
     spots: 15,
@@ -184,8 +179,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 5,
     title: "Senior Chess Club",
     host: "James Ho",
-    date: "Fri, Jun 26",
-    time: "2:00 PM",
+    startsAt: "2026-06-26T14:00:00+08:00",
     location: "Bishan Community Club",
     durationMinutes: 120,
     spots: 12,
@@ -198,8 +192,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 6,
     title: "Cantonese Cooking Class",
     host: "Mdm Grace Wong",
-    date: "Sun, Jun 28",
-    time: "10:00 AM",
+    startsAt: "2026-06-28T10:00:00+08:00",
     location: "Toa Payoh CC Kitchen",
     durationMinutes: 120,
     spots: 10,
@@ -212,8 +205,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 7,
     title: "Kelong Fishing Day Trip",
     host: "Uncle Ravi",
-    date: "Sat, Jun 27",
-    time: "6:00 AM",
+    startsAt: "2026-06-27T06:00:00+08:00",
     location: "Pulau Ubin Jetty",
     durationMinutes: 360,
     spots: 6,
@@ -226,8 +218,7 @@ export const standardActivities: StandardActivitySeed[] = [
     id: 8,
     title: "Book Club - Cafe Meeting",
     host: "Linda Tan",
-    date: "Fri, Jun 26",
-    time: "3:30 PM",
+    startsAt: "2026-06-26T15:30:00+08:00",
     location: "Tiong Bahru Bakery",
     durationMinutes: 90,
     spots: 10,
@@ -388,7 +379,7 @@ export const feedPosts = [
     id: 1,
     user: "Linda Tan",
     handle: "@lindatan",
-    time: "2h ago",
+    minutesAgo: 120,
     caption:
       "Beautiful morning at Fort Canning with the Tai Chi group. The energy was just wonderful. See you all next Saturday!",
     image:
@@ -400,7 +391,7 @@ export const feedPosts = [
     id: 2,
     user: "Raymond Koh",
     handle: "@raymondkoh",
-    time: "Yesterday",
+    minutesAgo: 1440,
     caption:
       "Caught the golden hour at the Botanic Gardens this morning. Who knew we had such beauty right here in Singapore.",
     image:
@@ -412,7 +403,7 @@ export const feedPosts = [
     id: 3,
     user: "Grace Wong",
     handle: "@gracewong",
-    time: "2 days ago",
+    minutesAgo: 2880,
     caption:
       "Our cooking class made the most amazing char kway teow from scratch. Everyone left with full stomachs and happy hearts.",
     image:
@@ -424,7 +415,7 @@ export const feedPosts = [
     id: 4,
     user: "David Ng",
     handle: "@davidng",
-    time: "3 days ago",
+    minutesAgo: 4320,
     caption:
       "6km along East Coast Park. Perfect way to start the weekend. Who's joining us next Saturday? Drop your name below!",
     image:
@@ -501,5 +492,48 @@ export const feedLikes = [
   {
     postId: 4,
     handles: ["@peterchia", "@raymondkoh", "@test"],
+  },
+];
+
+export const notifications = [
+  {
+    handle: "@lindatan",
+    minutesAgo: 15,
+    title: "Grace joined your walk",
+    content: "Grace Wong joined Morning Walk - East Coast Park.",
+    link: "/activities/4",
+    read: false,
+  },
+  {
+    handle: "@lindatan",
+    minutesAgo: 180,
+    title: "New comment",
+    content: "Susan commented on your Tai Chi post.",
+    link: "/feed",
+    read: false,
+  },
+  {
+    handle: "@lindatan",
+    minutesAgo: 1500,
+    title: "Activity reminder",
+    content: "Botanic Gardens Photography starts tomorrow at 7:30 AM.",
+    link: "/activities/3",
+    read: true,
+  },
+  {
+    handle: "@test",
+    minutesAgo: 30,
+    title: "Welcome to vida",
+    content: "Your activity groups and feed updates will appear here.",
+    link: "/activities",
+    read: false,
+  },
+  {
+    handle: "@test",
+    minutesAgo: 240,
+    title: "Tai Chi group update",
+    content: "A new message was posted in Tai Chi at Fort Canning.",
+    link: "/groups/1",
+    read: true,
   },
 ];

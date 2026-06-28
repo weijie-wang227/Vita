@@ -1,6 +1,6 @@
 import type { ChatPreview } from "./chatPreviews.js";
 
-type VitaCategory = "physical" | "social" | "cognitive" | "creative";
+type vidaCategory = "physical" | "social" | "cognitive" | "creative";
 
 type AnyDoc = Record<string, any>;
 
@@ -20,38 +20,6 @@ function formatChatTime(value: unknown) {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
-  }).format(date);
-}
-
-function formatRelativeTime(value: unknown) {
-  const date = new Date(toIsoString(value));
-  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-
-  if (seconds < 60) {
-    return "Just now";
-  }
-
-  const minutes = Math.floor(seconds / 60);
-
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
-
-  const days = Math.floor(hours / 24);
-
-  if (days < 7) {
-    return `${days}d ago`;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
   }).format(date);
 }
 
@@ -78,6 +46,19 @@ function getActivityCredits(activity: AnyDoc) {
   }
 
   return 0;
+}
+
+function getActivityStartsAt(activity: AnyDoc) {
+  const item = asObject(activity ?? {});
+  const startsAt = new Date(String(item.startsAt ?? ""));
+
+  if (!Number.isNaN(startsAt.getTime())) {
+    return startsAt.toISOString();
+  }
+
+  const fallback = new Date(toIsoString(item.createdAt ?? item.updatedAt));
+
+  return fallback.toISOString();
 }
 
 export function serializeFriend(friendship: AnyDoc) {
@@ -112,6 +93,19 @@ export function serializeAuthUser(user: AnyDoc) {
     id: String(item._id ?? item.mockId),
     email: item.email,
     ...serializeProfile(item),
+  };
+}
+
+export function serializeNotification(notification: AnyDoc) {
+  const item = asObject(notification);
+
+  return {
+    id: String(item._id),
+    dateReceived: toIsoString(item.dateReceived ?? item.createdAt),
+    title: item.title,
+    content: item.content,
+    link: item.link || undefined,
+    read: Boolean(item.read),
   };
 }
 
@@ -197,12 +191,11 @@ export function serializeChatMessage(
             activity: {
               id: activity.mockId,
               title: activity.title,
-              date: activity.date,
-              time: activity.time,
+              startsAt: getActivityStartsAt(activity),
               location: activity.location,
               durationMinutes: activity.durationMinutes,
               credits: getActivityCredits(activity),
-              categories: (activity.categories ?? []) as VitaCategory[],
+              categories: (activity.categories ?? []) as vidaCategory[],
             },
             joiningFriends,
           }
@@ -228,15 +221,15 @@ export function serializeActivity(activity: AnyDoc, joiningUsers: AnyDoc[] = [])
     id: item.mockId,
     title: item.title,
     host: host?.name ?? item.hostName ?? "Unknown host",
-    date: item.date,
-    time: item.time,
+    startsAt: getActivityStartsAt(item),
     location: item.location,
     durationMinutes: item.durationMinutes,
     spots: item.spots,
     credits: getActivityCredits(item),
     rating: item.rating,
-    categories: (item.categories ?? []) as VitaCategory[],
+    categories: (item.categories ?? []) as vidaCategory[],
     joiningFriends,
+    joinDisabledReason: item.joinDisabledReason,
   };
 
   if (!item.isPremium) {
@@ -275,7 +268,7 @@ export function serializeMapPin(pin: AnyDoc) {
     y: 0,
     label: item.label,
     premium: item.premium,
-    categories: (activity.categories ?? []) as VitaCategory[],
+    categories: (activity.categories ?? []) as vidaCategory[],
   };
 }
 
@@ -301,15 +294,16 @@ export function serializeFeedPost(post: AnyDoc, metricsValue?: FeedPostMetrics) 
     user: user.name,
     handle: user.handle,
     avatar: user.avatarUrl,
-    time: item.time,
+    createdAt: toIsoString(item.createdAt ?? item.updatedAt),
     caption: item.caption,
     image: item.image || undefined,
     likesCount: likeCount,
     likedByMe: metrics?.likedByCurrentUser ?? false,
     comments: metrics?.commentCount ?? item.comments,
     activity: activity?.title ?? group?.name,
-    durationMinutes: activity?.durationMinutes,
-    categories: (activity?.categories ?? []) as VitaCategory[],
+    durationMinutes: item.durationMinutes ?? activity?.durationMinutes,
+    categories: ((item.categories?.length ? item.categories : activity?.categories) ??
+      []) as vidaCategory[],
     group: group
       ? {
           id: group.mockId,
@@ -334,7 +328,6 @@ export function serializeComment(comment: AnyDoc) {
     handle: user.handle ?? "",
     avatar: user.avatarUrl ?? "",
     body: item.body,
-    time: formatRelativeTime(createdAt),
     createdAt,
   };
 }

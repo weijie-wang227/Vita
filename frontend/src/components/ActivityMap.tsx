@@ -4,9 +4,9 @@ import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import {
   categoryIcon,
   primaryActivityCategory,
-  vitaCategories,
-  vitaCategoryColor,
-  vitaCategoryLabel,
+  vidaCategories,
+  vidaCategoryColor,
+  vidaCategoryLabel,
 } from "../lib/activityPresentation";
 import type { MapPin } from "../lib/types";
 import { useAppState } from "../state";
@@ -71,7 +71,7 @@ export function ActivityMap({ onClose }: { onClose: () => void }) {
 
           {mapPins.map((pin) => {
             const primaryCategory = primaryActivityCategory(pin.categories);
-            const color = vitaCategoryColor[primaryCategory];
+            const color = vidaCategoryColor[primaryCategory];
 
             return (
               <CircleMarker
@@ -108,19 +108,22 @@ export function ActivityMap({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="px-4 py-3 flex gap-3 overflow-x-auto scrollbar-minimal">
-        {vitaCategories.map((category) => (
-          <div key={category} className="flex items-center gap-1.5 flex-shrink-0">
+        {vidaCategories.map((category) => (
+          <div
+            key={category}
+            className="flex items-center gap-1.5 flex-shrink-0"
+          >
             <div
               className="w-4 h-4 rounded-full flex items-center justify-center"
               style={{
-                backgroundColor: `${vitaCategoryColor[category]}22`,
-                color: vitaCategoryColor[category],
+                backgroundColor: `${vidaCategoryColor[category]}22`,
+                color: vidaCategoryColor[category],
               }}
             >
               {categoryIcon(category, 9)}
             </div>
             <span className="text-[10px] text-muted-foreground capitalize">
-              {vitaCategoryLabel[category]}
+              {vidaCategoryLabel[category]}
             </span>
           </div>
         ))}

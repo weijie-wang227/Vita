@@ -1,12 +1,17 @@
 import {
   ArrowUpRight,
+  Ban,
   Calendar,
   ChevronLeft,
   Clock,
   Info,
+  Loader2,
+  LogOut,
   MapPin,
   Send,
   ShieldCheck,
+  Trash2,
+  UserMinus,
   Users,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -18,16 +23,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../app/components/ui/sheet";
+import {
+  formatActivityDate,
+  formatActivityTime,
+} from "../lib/activityPresentation";
 import { useAppState } from "../state";
 
 export function GroupDetailPage() {
   const {
     authUser,
     chatMessages,
+    blacklistGroupMember,
+    deleteGroup,
     groupChats,
     isLoading,
+    leaveGroup,
     loadGroupMessages,
     profile,
+    removeGroupMember,
     sendGroupMessage,
   } = useAppState();
   const navigate = useNavigate();
@@ -37,6 +50,10 @@ export function GroupDetailPage() {
   const [messageError, setMessageError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isMemberSheetOpen, setIsMemberSheetOpen] = useState(false);
+  const [memberActionError, setMemberActionError] = useState<string | null>(null);
+  const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
+    null,
+  );
   const endRef = useRef<HTMLDivElement | null>(null);
   const group = groupChats.find((chat) => chat.id === groupId);
   const messages = Number.isFinite(groupId) ? chatMessages[groupId] ?? [] : [];
@@ -90,6 +107,48 @@ export function GroupDetailPage() {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const runMemberAction = async (
+    actionKey: string,
+    action: () => Promise<void>,
+  ) => {
+    setMemberActionError(null);
+    setPendingMemberAction(actionKey);
+
+    try {
+      await action();
+    } catch (error) {
+      setMemberActionError(
+        error instanceof Error ? error.message : "Unable to update group.",
+      );
+    } finally {
+      setPendingMemberAction(null);
+    }
+  };
+
+  const handleLeaveGroup = () => {
+    void runMemberAction("leave", () => leaveGroup(groupId));
+  };
+
+  const handleDeleteGroup = () => {
+    if (!window.confirm(`Delete ${group?.name ?? "this group"}?`)) {
+      return;
+    }
+
+    void runMemberAction("delete", () => deleteGroup(groupId));
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    void runMemberAction(`remove:${memberId}`, () =>
+      removeGroupMember(groupId, memberId).then(() => undefined),
+    );
+  };
+
+  const handleBlacklistMember = (memberId: string) => {
+    void runMemberAction(`blacklist:${memberId}`, () =>
+      blacklistGroupMember(groupId, memberId).then(() => undefined),
+    );
   };
 
   if (!group) {
@@ -174,6 +233,41 @@ export function GroupDetailPage() {
             </SheetDescription>
           </SheetHeader>
           <div className="max-h-[calc(82vh-96px)] overflow-y-auto px-4 py-2 scrollbar-minimal">
+            <div className="flex gap-2 border-b border-border py-3">
+              <button
+                type="button"
+                onClick={handleLeaveGroup}
+                disabled={Boolean(pendingMemberAction)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-60"
+              >
+                {pendingMemberAction === "leave" ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <LogOut size={13} />
+                )}
+                Leave group
+              </button>
+              {group.isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleDeleteGroup}
+                  disabled={Boolean(pendingMemberAction)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive-foreground disabled:opacity-60"
+                >
+                  {pendingMemberAction === "delete" ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                  Delete group
+                </button>
+              )}
+            </div>
+            {memberActionError && (
+              <p className="mt-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                {memberActionError}
+              </p>
+            )}
             {groupMembers.length > 0 ? (
               groupMembers.map((member) => {
                 const isCurrentUser =
@@ -212,12 +306,44 @@ export function GroupDetailPage() {
                         {member.handle}
                       </p>
                     </div>
-                    {member.isAdmin && (
-                      <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-accent/25 bg-accent/10 px-2 py-1 text-[10px] font-medium text-accent">
-                        <ShieldCheck size={11} />
-                        Admin
-                      </span>
-                    )}
+                    <div className="flex flex-shrink-0 items-center gap-1.5">
+                      {member.isAdmin && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-accent/25 bg-accent/10 px-2 py-1 text-[10px] font-medium text-accent">
+                          <ShieldCheck size={11} />
+                          Admin
+                        </span>
+                      )}
+                      {group.isAdmin && !isCurrentUser && !member.isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.id)}
+                            disabled={Boolean(pendingMemberAction)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-muted-foreground disabled:opacity-60"
+                            aria-label={`Remove ${member.name}`}
+                          >
+                            {pendingMemberAction === `remove:${member.id}` ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <UserMinus size={13} />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleBlacklistMember(member.id)}
+                            disabled={Boolean(pendingMemberAction)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10 text-destructive-foreground disabled:opacity-60"
+                            aria-label={`Blacklist ${member.name}`}
+                          >
+                            {pendingMemberAction === `blacklist:${member.id}` ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <Ban size={13} />
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -322,13 +448,13 @@ export function GroupDetailPage() {
                         <div className="flex min-w-0 items-center gap-1.5">
                           <Calendar size={11} className="flex-shrink-0 text-accent" />
                           <span className="truncate">
-                            {invite.activity.date}
+                            {formatActivityDate(invite.activity.startsAt)}
                           </span>
                         </div>
                         <div className="flex min-w-0 items-center gap-1.5">
                           <Clock size={11} className="flex-shrink-0 text-accent" />
                           <span className="truncate">
-                            {invite.activity.time}
+                            {formatActivityTime(invite.activity.startsAt)}
                           </span>
                         </div>
                         <div className="col-span-2 flex min-w-0 items-center gap-1.5">

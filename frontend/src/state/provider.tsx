@@ -3,16 +3,22 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
   addFriend as requestAddFriend,
+  blacklistGroupMember as requestBlacklistGroupMember,
   clearAuthToken,
   createActivity as requestCreateActivity,
   createFeedComment as requestCreateFeedComment,
   createFeedPost as requestCreateFeedPost,
+  deleteGroup as requestDeleteGroup,
+  deleteFeedPost as requestDeleteFeedPost,
   fetchFeedComments as requestFetchFeedComments,
   likeFeedPost as requestLikeFeedPost,
+  leaveGroup as requestLeaveGroup,
+  removeGroupMember as requestRemoveGroupMember,
   setAuthToken,
   signIn as requestSignIn,
   signUp as requestSignUp,
   unlikeFeedPost as requestUnlikeFeedPost,
+  updateFeedPost as requestUpdateFeedPost,
   updateSettingsPreferences as requestUpdateSettingsPreferences,
 } from "../api";
 import { getStoredThemeMode, persistThemeMode } from "../app/themeMode";
@@ -24,6 +30,7 @@ import type {
   Friend,
   GroupChat,
   MapPin,
+  Notification,
   PremiumActivity,
   Profile,
   SettingsPreferences,
@@ -126,6 +133,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   >({});
   const [friends, setFriends] = useState<Friend[]>([]);
   const [mapPins, setMapPins] = useState<MapPin[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [authUser, setAuthUser] = useState<AppState["authUser"]>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -160,6 +168,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setGroupChats,
     setIsLoading,
     setMapPins,
+    setNotifications,
     setPremiumActivities,
     setJoinedActivityIds,
     setProfile,
@@ -178,6 +187,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const applyGroupUpdate = useCallback((group: GroupChat) => {
     setGroupChats((current) => upsertGroup(current, group));
+  }, []);
+
+  const removeGroupLocally = useCallback((groupId: number) => {
+    setGroupChats((current) => current.filter((group) => group.id !== groupId));
+    setChatMessages((current) => {
+      const { [groupId]: _removedMessages, ...next } = current;
+
+      return next;
+    });
   }, []);
 
   const navigateToGroup = useCallback(
@@ -271,7 +289,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     let ignore = false;
 
-    setShowProfileFriends(true);
     setActiveTab("profile");
 
     async function acceptFriendInvite() {
@@ -280,6 +297,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
 
       if (pendingFriendInviteId === authUser.id) {
+        setShowProfileFriends(false);
         setFriendInviteFeedback("You cannot add yourself from your own QR code.");
         navigate("/profile", { replace: true });
         clearPendingFriendInviteId();
@@ -301,6 +319,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         navigate("/profile", { replace: true });
       } catch (error) {
         if (!ignore) {
+          setShowProfileFriends(false);
           setFriendInviteFeedback(
             getErrorMessage(error, "Unable to add friend from invite link."),
           );
@@ -353,6 +372,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       chatMessages,
       friends,
       mapPins,
+      notifications,
       profile,
       joinedActivityIds,
       likedPostIds,
@@ -373,6 +393,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setChatMessages({});
           setFriends([]);
           setMapPins([]);
+          setNotifications([]);
           setAuthError(null);
           setActiveTab("activities");
           setShowProfile(false);
@@ -403,6 +424,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setChatMessages({});
           setFriends([]);
           setMapPins([]);
+          setNotifications([]);
           setAuthError(null);
           setActiveTab("activities");
           setShowProfile(false);
@@ -453,6 +475,46 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Unable to create feed post", error);
           const message = getErrorMessage(error, "Unable to create feed post");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      updateFeedPost: async (postId, input) => {
+        try {
+          const post = await requestUpdateFeedPost(postId, input);
+
+          setFeedPosts((current) =>
+            current.map((item) => (item.id === post.id ? post : item)),
+          );
+          setApiError(null);
+
+          return post;
+        } catch (error) {
+          console.error("Unable to update feed post", error);
+          const message = getErrorMessage(error, "Unable to update feed post");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      deleteFeedPost: async (postId) => {
+        try {
+          await requestDeleteFeedPost(postId);
+
+          setFeedPosts((current) => current.filter((post) => post.id !== postId));
+          setFeedComments((current) => {
+            const { [postId]: _deletedComments, ...next } = current;
+
+            return next;
+          });
+          setLikedPostIds((current) => {
+            const { [postId]: _deletedLike, ...next } = current;
+
+            return next;
+          });
+          setApiError(null);
+        } catch (error) {
+          console.error("Unable to delete feed post", error);
+          const message = getErrorMessage(error, "Unable to delete feed post");
           setApiError(message);
           throw new Error(message);
         }
@@ -544,6 +606,66 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearFriendInviteResult,
       joinActivity,
       joinGroup,
+      leaveGroup: async (groupId) => {
+        try {
+          await requestLeaveGroup(groupId);
+          removeGroupLocally(groupId);
+          setSelectedGroupId(null);
+          setActiveTab("chat");
+          navigate("/groups");
+          setApiError(null);
+        } catch (error) {
+          console.error("Unable to leave group", error);
+          const message = getErrorMessage(error, "Unable to leave group");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      deleteGroup: async (groupId) => {
+        try {
+          await requestDeleteGroup(groupId);
+          removeGroupLocally(groupId);
+          setSelectedGroupId(null);
+          setActiveTab("chat");
+          navigate("/groups");
+          setApiError(null);
+        } catch (error) {
+          console.error("Unable to delete group", error);
+          const message = getErrorMessage(error, "Unable to delete group");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      removeGroupMember: async (groupId, memberId) => {
+        try {
+          const response = await requestRemoveGroupMember(groupId, memberId);
+
+          applyGroupUpdate(response.group);
+          setApiError(null);
+
+          return response.group;
+        } catch (error) {
+          console.error("Unable to remove member", error);
+          const message = getErrorMessage(error, "Unable to remove member");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      blacklistGroupMember: async (groupId, memberId) => {
+        try {
+          const response = await requestBlacklistGroupMember(groupId, memberId);
+
+          applyGroupUpdate(response.group);
+          setApiError(null);
+
+          return response.group;
+        } catch (error) {
+          console.error("Unable to blacklist member", error);
+          const message = getErrorMessage(error, "Unable to blacklist member");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
       loadGroupMessages,
       sendGroupMessage,
       signOut: () => {
@@ -557,6 +679,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setFeedComments({});
         setFriends([]);
         setMapPins([]);
+        setNotifications([]);
         setGroupChats([]);
         setChatMessages({});
         setJoinedActivityIds([]);
@@ -684,6 +807,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       chatMessages,
       friends,
       mapPins,
+      notifications,
       profile,
       joinedActivityIds,
       likedPostIds,
@@ -697,6 +821,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinActivity,
       joinGroup,
       loadGroupMessages,
+      removeGroupLocally,
       sendGroupMessage,
       updateProfile,
     ],

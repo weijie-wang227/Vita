@@ -4,20 +4,23 @@ import {
   AdminModel,
   ActivityJoinModel,
   ActivityModel,
+  BlacklistModel,
   ChatMessageModel,
   ChatModel,
   MapPinModel,
-} from "../models/VitaData.js";
+} from "../models/VidaData.js";
 import { getChatPreview, getLatestChatPreviews } from "../chatPreviews.js";
 import { serializeActivity, serializeChat, serializeMapPin } from "../serializers.js";
 
 const router = Router();
-const vitaCategories = new Set([
+const vidaCategories = new Set([
   "physical",
   "social",
   "cognitive",
   "creative",
 ]);
+const blacklistJoinReason =
+  "You cannot join this activity because you are blacklisted from its group.";
 
 function asObject(doc: Record<string, any>) {
   return typeof doc.toObject === "function" ? doc.toObject() : doc;
@@ -52,43 +55,18 @@ function getFiniteNumber(value: unknown) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function formatDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function formatTime(value: string) {
-  const match = value.match(/^(\d{2}):(\d{2})$/);
-
-  if (!match) {
-    return value;
-  }
-
-  const hour = Number(match[1]);
-  const minutes = match[2];
-  const displayHour = hour % 12 || 12;
-  const suffix = hour < 12 ? "AM" : "PM";
-
-  return `${displayHour}:${minutes} ${suffix}`;
-}
-
 async function nextMockId(
   model: typeof ActivityModel | typeof ChatModel | typeof MapPinModel,
 ) {
   const lastItem = await model.findOne().sort({ mockId: -1 }).select("mockId");
 
   return (lastItem?.mockId ?? 0) + 1;
+}
+
+function getDate(value: unknown) {
+  const date = value instanceof Date ? value : new Date(String(value ?? ""));
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function formatPreviewTime(value: Date) {
@@ -116,32 +94,75 @@ async function findAdminUserIds(groupId: unknown) {
   );
 }
 
-router.get("/", async (_req, res) => {
+async function findBlacklistedGroupIds(userId: unknown, activities: Record<string, any>[]) {
+  const groupIds = activities
+    .map((activity) => asObject(activity).chat?._id ?? asObject(activity).chat)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
+  if (groupIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const blacklistRows = await BlacklistModel.find({
+    user: userId,
+    group: { $in: groupIds },
+  }).select("group");
+
+  return new Set(
+    blacklistRows.map((row: Record<string, any>) =>
+      String(row.group?._id ?? row.group),
+    ),
+  );
+}
+
+function withJoinDisabledReason(activity: Record<string, any>, groupIds: Set<string>) {
+  const item = asObject(activity);
+  const groupId = String(item.chat?._id ?? item.chat ?? "");
+
+  if (!groupIds.has(groupId)) {
+    return activity;
+  }
+
+  return {
+    ...item,
+    joinDisabledReason: blacklistJoinReason,
+  };
+}
+
+router.get("/", async (req, res) => {
+  const user = await findAuthenticatedUser(req.headers.authorization);
   const activities = await ActivityModel.find({ isPremium: false })
     .populate("host")
     .sort({ mockId: 1 });
   const joiningUsersByActivityId = await getJoiningUsersByActivityId(activities);
+  const blacklistedGroupIds = user
+    ? await findBlacklistedGroupIds(user._id, activities)
+    : new Set<string>();
 
   res.json(
     activities.map((activity) =>
       serializeActivity(
-        activity,
+        withJoinDisabledReason(activity, blacklistedGroupIds),
         joiningUsersByActivityId.get(String(activity._id)) ?? [],
       ),
     ),
   );
 });
 
-router.get("/premium", async (_req, res) => {
+router.get("/premium", async (req, res) => {
+  const user = await findAuthenticatedUser(req.headers.authorization);
   const activities = await ActivityModel.find({ isPremium: true })
     .populate("host")
     .sort({ mockId: 1 });
   const joiningUsersByActivityId = await getJoiningUsersByActivityId(activities);
+  const blacklistedGroupIds = user
+    ? await findBlacklistedGroupIds(user._id, activities)
+    : new Set<string>();
 
   res.json(
     activities.map((activity) =>
       serializeActivity(
-        activity,
+        withJoinDisabledReason(activity, blacklistedGroupIds),
         joiningUsersByActivityId.get(String(activity._id)) ?? [],
       ),
     ),
@@ -165,8 +186,7 @@ router.post("/", async (req, res, next) => {
     }
 
     const title = getString(req.body?.title);
-    const date = getString(req.body?.date);
-    const time = getString(req.body?.time);
+    const startsAt = getDate(req.body?.startsAt);
     const location = getString(req.body?.location);
     const latitude = getFiniteNumber(req.body?.latitude);
     const longitude = getFiniteNumber(req.body?.longitude);
@@ -183,9 +203,9 @@ router.post("/", async (req, res, next) => {
       ? req.body.categories.map(getString).filter(Boolean)
       : [];
 
-    if (!title || !date || !time || !location) {
+    if (!title || !startsAt || !location) {
       res.status(400).json({
-        message: "Title, date, time, and location are required.",
+        message: "Title, start date/time, and location are required.",
       });
       return;
     }
@@ -226,7 +246,7 @@ router.post("/", async (req, res, next) => {
 
     if (
       categories.length === 0 ||
-      categories.some((category) => !vitaCategories.has(category))
+      categories.some((category) => !vidaCategories.has(category))
     ) {
       res.status(400).json({ message: "Choose at least one valid category." });
       return;
@@ -286,8 +306,7 @@ router.post("/", async (req, res, next) => {
       mockId: activityMockId,
       title,
       host: user._id,
-      date: formatDate(date),
-      time: formatTime(time),
+      startsAt,
       location,
       durationMinutes: Math.round(durationMinutes),
       spots: Math.round(spots),
@@ -363,6 +382,16 @@ router.post("/:id/join", async (req, res, next) => {
       return;
     }
 
+    const blacklist = await BlacklistModel.findOne({
+      user: user._id,
+      group: activity.chat,
+    }).select("_id");
+
+    if (blacklist) {
+      res.status(403).json({ message: blacklistJoinReason });
+      return;
+    }
+
     await ActivityJoinModel.updateOne(
       { userId: user._id, activityId: activity._id },
       { $setOnInsert: { userId: user._id, activityId: activity._id } },
@@ -405,6 +434,7 @@ router.post("/:id/join", async (req, res, next) => {
 });
 
 router.get("/:id", async (req, res) => {
+  const user = await findAuthenticatedUser(req.headers.authorization);
   const activityId = Number(req.params.id);
   const activity = await ActivityModel.findOne({ mockId: activityId }).populate(
     "host",
@@ -416,10 +446,13 @@ router.get("/:id", async (req, res) => {
   }
 
   const joiningUsersByActivityId = await getJoiningUsersByActivityId([activity]);
+  const blacklistedGroupIds = user
+    ? await findBlacklistedGroupIds(user._id, [activity])
+    : new Set<string>();
 
   res.json(
     serializeActivity(
-      activity,
+      withJoinDisabledReason(activity, blacklistedGroupIds),
       joiningUsersByActivityId.get(String(activity._id)) ?? [],
     ),
   );

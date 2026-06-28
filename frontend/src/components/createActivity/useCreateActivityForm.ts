@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { CreateActivityInput, VitaCategory } from "../../lib/types";
+import type { CreateActivityInput, vidaCategory } from "../../lib/types";
 import { SEARCH_MIN_QUERY_LENGTH } from "../../hooks/useDebouncedMinimumQuery";
 import { useAppState } from "../../state";
 import { searchPhotonLocations } from "./locationSearch";
@@ -103,7 +103,7 @@ export function useCreateActivityForm({
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const toggleCategory = (category: VitaCategory) => {
+  const toggleCategory = (category: vidaCategory) => {
     setForm((current) => {
       const isSelected = current.categories.includes(category);
 
@@ -147,14 +147,20 @@ export function useCreateActivityForm({
     const durationMinutes = Number(form.durationMinutes);
     const spots = Number(form.spots);
     const credits = Number(form.credits);
+    const startsAt = `${form.date}T${form.time}:00+08:00`;
 
     if (!selectedPosition) {
       setError("Drop a pin on the map for this activity.");
       return;
     }
 
+    if (!form.date || !form.time || Number.isNaN(new Date(startsAt).getTime())) {
+      setError("Choose a valid date and time.");
+      return;
+    }
+
     if (form.categories.length === 0) {
-      setError("Choose at least one Vita category.");
+      setError("Choose at least one vida category.");
       return;
     }
 
@@ -175,8 +181,7 @@ export function useCreateActivityForm({
 
     const payload: CreateActivityInput = {
       title: form.title.trim(),
-      date: form.date,
-      time: form.time,
+      startsAt,
       location: form.location.trim(),
       latitude: selectedPosition[0],
       longitude: selectedPosition[1],

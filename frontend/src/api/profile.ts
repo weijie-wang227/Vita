@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type {
   Friend,
+  FriendSearchResult,
   HandleAvailability,
   Profile,
   UpdateProfileInput,
@@ -25,6 +26,12 @@ export async function updateProfile(input: UpdateProfileInput) {
 
 export async function fetchFriends() {
   return apiRequest<Friend[]>("/friends");
+}
+
+export async function searchFriendsByHandle(query: string) {
+  return apiRequest<FriendSearchResult[]>(
+    `/friends/search?query=${encodeURIComponent(query)}`,
+  );
 }
 
 export async function addFriend(friendId: string) {

@@ -1,6 +1,6 @@
-# Vita Backend
+# vida Backend
 
-Express/MongoDB API backend for Vita. It serves the real API used by `new-frontend`.
+Express/MongoDB API backend for vida. It serves the real API used by `new-frontend`.
 
 ## Actual Features
 

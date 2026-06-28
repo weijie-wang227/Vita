@@ -5,7 +5,11 @@ import {
   findAuthenticatedUser,
   normalizeHandle,
 } from "../auth.js";
-import { FriendshipModel, UserModel } from "../models/VitaData.js";
+import {
+  FriendshipModel,
+  SettingsModel,
+  UserModel,
+} from "../models/VidaData.js";
 import { serializeFriend, serializeProfile } from "../serializers.js";
 
 const router = Router();
@@ -38,6 +42,35 @@ async function findHandleOverlap(handle: string, userId: unknown) {
     _id: { $ne: userId },
     handle,
   });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeHandleSearchQuery(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, "")
+    .replace(/[^a-z0-9_]+/g, "");
+}
+
+function serializeFriendSearchUser(user: Record<string, any>) {
+  return {
+    id: String(user._id),
+    name: user.name,
+    handle: user.handle,
+    avatar: user.avatarUrl,
+  };
+}
+
+async function isFriendDiscoverable(userId: unknown) {
+  const settings = await SettingsModel.findOne({ user: userId }).select(
+    "preferences.friendDiscovery",
+  );
+
+  return settings?.preferences?.friendDiscovery !== false;
 }
 
 router.get("/profile", async (req, res) => {
@@ -180,6 +213,45 @@ router.get("/friends", async (req, res) => {
   res.json(savedFriends.map(serializeFriend));
 });
 
+router.get("/friends/search", async (req, res) => {
+  const authUser = await findAuthenticatedUser(req.headers.authorization);
+
+  if (!authUser) {
+    res.status(401).json({ message: "Not signed in." });
+    return;
+  }
+
+  const query = normalizeHandleSearchQuery(getString(req.query.query));
+
+  if (!query) {
+    res.json([]);
+    return;
+  }
+
+  const users = await UserModel.find({
+    _id: { $ne: authUser._id },
+    handle: new RegExp(`^@${escapeRegExp(query)}`, "i"),
+  })
+    .sort({ handle: 1 })
+    .limit(24);
+  const settings = await SettingsModel.find({
+    user: { $in: users.map((user: Record<string, any>) => user._id) },
+    "preferences.friendDiscovery": false,
+  }).select("user");
+  const hiddenUserIds = new Set(
+    settings.map((setting: Record<string, any>) => String(setting.user)),
+  );
+
+  res.json(
+    users
+      .filter(
+        (user: Record<string, any>) => !hiddenUserIds.has(String(user._id)),
+      )
+      .slice(0, 12)
+      .map(serializeFriendSearchUser),
+  );
+});
+
 router.post("/friends/add/:friendId", async (req, res) => {
   const authUser = await findAuthenticatedUser(req.headers.authorization);
 
@@ -213,6 +285,11 @@ router.post("/friends/add/:friendId", async (req, res) => {
     return;
   }
 
+  if (!(await isFriendDiscoverable(friendUser._id))) {
+    res.status(404).json({ message: "Friend not found." });
+    return;
+  }
+
   const friendship = await FriendshipModel.findOneAndUpdate(
     { userId: authUser._id, friendId: friendUser._id },
     {
@@ -222,7 +299,7 @@ router.post("/friends/add/:friendId", async (req, res) => {
         joined: [],
       },
     },
-    { new: true, upsert: true, setDefaultsOnInsert: true },
+    { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true },
   ).populate("friendId");
 
   await FriendshipModel.updateOne(

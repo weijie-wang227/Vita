@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type {
   ChatMessage,
+  GroupMutationResponse,
   GroupChat,
   JoinGroupResponse,
   SendGroupMessageResponse,
@@ -25,4 +26,34 @@ export async function joinGroup(groupId: number) {
   return apiRequest<JoinGroupResponse>(`/groups/${groupId}/join`, {
     method: "POST",
   });
+}
+
+export async function leaveGroup(groupId: number) {
+  return apiRequest<void>(`/groups/${groupId}/members/me`, {
+    method: "DELETE",
+  });
+}
+
+export async function deleteGroup(groupId: number) {
+  return apiRequest<void>(`/groups/${groupId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function removeGroupMember(groupId: number, memberId: string) {
+  return apiRequest<GroupMutationResponse>(
+    `/groups/${groupId}/members/${memberId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export async function blacklistGroupMember(groupId: number, memberId: string) {
+  return apiRequest<GroupMutationResponse>(
+    `/groups/${groupId}/blacklist/${memberId}`,
+    {
+      method: "POST",
+    },
+  );
 }

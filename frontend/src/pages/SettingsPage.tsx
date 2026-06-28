@@ -12,7 +12,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import type { VitaThemeMode } from "../app/themeMode";
+import type { vidaThemeMode } from "../app/themeMode";
 import type { SettingsPreferences } from "../lib/types";
 import { useAppState } from "../state";
 
@@ -31,8 +31,8 @@ type SettingsLinkProps = {
 };
 
 type ThemeModeSelectorProps = {
-  mode: VitaThemeMode;
-  onModeChange: (mode: VitaThemeMode) => void;
+  mode: vidaThemeMode;
+  onModeChange: (mode: vidaThemeMode) => void;
 };
 
 function SettingToggle({
@@ -88,7 +88,7 @@ function SettingsLink({ description, icon: Icon, label }: SettingsLinkProps) {
 }
 
 function ThemeModeSelector({ mode, onModeChange }: ThemeModeSelectorProps) {
-  const options: { id: VitaThemeMode; label: string; Icon: LucideIcon }[] = [
+  const options: { id: vidaThemeMode; label: string; Icon: LucideIcon }[] = [
     { id: "light", label: "Light", Icon: Sun },
     { id: "dark", label: "Dark", Icon: Moon },
   ];
@@ -151,7 +151,7 @@ export function SettingsPage() {
     }).catch(() => undefined);
   };
 
-  const handleThemeModeChange = (mode: VitaThemeMode) => {
+  const handleThemeModeChange = (mode: vidaThemeMode) => {
     savePreferences({ appearance: mode });
   };
 
@@ -189,7 +189,7 @@ export function SettingsPage() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-bold text-foreground">
-                {profile.name || "Vita profile"}
+                {profile.name || "vida profile"}
               </h2>
               <p className="truncate text-[11px] font-medium text-accent">
                 {profile.handle || authUser?.email}

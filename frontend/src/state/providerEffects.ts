@@ -6,6 +6,7 @@ import {
   fetchFriends,
   fetchGroupChats,
   fetchMapPins,
+  fetchNotifications,
   fetchPremiumActivities,
   fetchProfile,
   fetchSettingsPreferences,
@@ -20,6 +21,7 @@ import type {
   Friend,
   GroupChat,
   MapPin,
+  Notification,
   PremiumActivity,
   Profile,
   SettingsPreferences,
@@ -92,6 +94,7 @@ export function useLoadAppData({
   setGroupChats,
   setIsLoading,
   setMapPins,
+  setNotifications,
   setPremiumActivities,
   setJoinedActivityIds,
   setProfile,
@@ -106,6 +109,7 @@ export function useLoadAppData({
   setGroupChats: Setter<GroupChat[]>;
   setIsLoading: Setter<boolean>;
   setMapPins: Setter<MapPin[]>;
+  setNotifications: Setter<Notification[]>;
   setPremiumActivities: Setter<PremiumActivity[]>;
   setJoinedActivityIds: Setter<number[]>;
   setProfile: Setter<Profile>;
@@ -131,6 +135,7 @@ export function useLoadAppData({
           nextGroupChats,
           nextFriends,
           nextMapPins,
+          nextNotifications,
           nextProfile,
           nextSettingsPreferences,
         ] = await Promise.all([
@@ -140,6 +145,7 @@ export function useLoadAppData({
           fetchGroupChats(),
           fetchFriends(),
           fetchMapPins(),
+          fetchNotifications(),
           fetchProfile(),
           fetchSettingsPreferences(),
         ]);
@@ -163,6 +169,7 @@ export function useLoadAppData({
         setGroupChats(nextGroupChats);
         setFriends(nextFriends);
         setMapPins(nextMapPins);
+        setNotifications(nextNotifications);
         setProfile(nextProfile);
         setSettingsPreferences(nextSettingsPreferences);
         persistThemeMode(nextSettingsPreferences.appearance);
@@ -193,6 +200,7 @@ export function useLoadAppData({
     setGroupChats,
     setIsLoading,
     setMapPins,
+    setNotifications,
     setPremiumActivities,
     setJoinedActivityIds,
     setProfile,

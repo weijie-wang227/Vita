@@ -9,7 +9,7 @@ import {
   normalizeHandle,
   verifyPassword,
 } from "../auth.js";
-import { UserModel } from "../models/VitaData.js";
+import { UserModel } from "../models/VidaData.js";
 import { serializeAuthUser } from "../serializers.js";
 
 const router = Router();

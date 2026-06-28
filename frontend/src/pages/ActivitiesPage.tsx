@@ -13,6 +13,10 @@ import {
 import { BaseSearchBar } from "../components/BaseSearchBar";
 import { PremiumCard, StandardRow } from "../components/ActivityCards";
 import { FloatingActionButton } from "../components/FloatingActionButton";
+import {
+  formatActivityDate,
+  formatActivityTime,
+} from "../lib/activityPresentation";
 import type { Activity } from "../lib/types";
 import { useAppState } from "../state";
 
@@ -31,8 +35,9 @@ function searchableActivityText(activity: Activity) {
   return [
     activity.title,
     activity.host,
-    activity.date,
-    activity.time,
+    activity.startsAt,
+    formatActivityDate(activity.startsAt),
+    formatActivityTime(activity.startsAt),
     activity.location,
     String(activity.credits),
     // activity.rating,

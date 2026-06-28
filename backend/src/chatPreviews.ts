@@ -1,4 +1,4 @@
-import { ChatMessageModel } from "./models/VitaData.js";
+import { ChatMessageModel } from "./models/VidaData.js";
 
 type AnyDoc = Record<string, any>;
 

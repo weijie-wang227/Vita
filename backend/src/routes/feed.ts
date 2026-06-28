@@ -6,13 +6,20 @@ import {
   FeedPostModel,
   FriendshipModel,
   LikeModel,
-} from "../models/VitaData.js";
+} from "../models/VidaData.js";
 import { serializeComment, serializeFeedPost } from "../serializers.js";
 
 const router = Router();
 const maxCaptionLength = 1200;
 const maxCommentLength = 500;
 const maxImageUrlLength = 4096;
+const maxDurationMinutes = 24 * 60;
+const validCategories = new Set([
+  "physical",
+  "social",
+  "cognitive",
+  "creative",
+]);
 
 function asObject(doc: Record<string, any>) {
   return typeof doc.toObject === "function" ? doc.toObject() : doc;
@@ -20,6 +27,21 @@ function asObject(doc: Record<string, any>) {
 
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getCategories(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value.filter(
+        (category): category is string =>
+          typeof category === "string" && validCategories.has(category),
+      ),
+    ),
+  );
 }
 
 async function nextMockId() {
@@ -51,6 +73,20 @@ async function findVisibleFeedPost(postId: number, user: Record<string, any>) {
   return FeedPostModel.findOne({
     mockId: postId,
     user: { $in: visibleUserIds },
+  })
+    .populate("user")
+    .populate("activity")
+    .populate("group");
+}
+
+async function findOwnedFeedPost(postId: number, user: Record<string, any>) {
+  if (!Number.isInteger(postId)) {
+    return null;
+  }
+
+  return FeedPostModel.findOne({
+    mockId: postId,
+    user: user._id,
   })
     .populate("user")
     .populate("activity")
@@ -108,7 +144,7 @@ router.get("/", async (req, res, next) => {
       .populate("user")
       .populate("activity")
       .populate("group")
-      .sort({ mockId: 1 });
+      .sort({ createdAt: -1, _id: -1 });
     const postIds = posts.map((post: Record<string, any>) => asObject(post)._id);
     const commentCounts = await CommentModel.aggregate([
       { $match: { post: { $in: postIds } } },
@@ -143,25 +179,6 @@ router.get("/", async (req, res, next) => {
       });
     });
 
-    serializedPosts.sort((a, b) => {
-      const aIsFresh = a.time === "Just now";
-      const bIsFresh = b.time === "Just now";
-
-      if (aIsFresh && bIsFresh) {
-        return b.id - a.id;
-      }
-
-      if (aIsFresh) {
-        return -1;
-      }
-
-      if (bIsFresh) {
-        return 1;
-      }
-
-      return 0;
-    });
-
     res.json(serializedPosts);
   } catch (error) {
     next(error);
@@ -179,6 +196,8 @@ router.post("/", async (req, res, next) => {
 
     const caption = getString(req.body?.caption);
     const imageUrl = getString(req.body?.image);
+    const categories = getCategories(req.body?.categories);
+    const durationMinutes = Number(req.body?.durationMinutes);
     const groupId =
       req.body?.groupId === undefined || req.body?.groupId === null
         ? null
@@ -191,6 +210,20 @@ router.post("/", async (req, res, next) => {
 
     if (caption.length > maxCaptionLength) {
       res.status(400).json({ message: "Post caption is too long." });
+      return;
+    }
+
+    if (categories.length === 0) {
+      res.status(400).json({ message: "Choose at least one category." });
+      return;
+    }
+
+    if (
+      !Number.isInteger(durationMinutes) ||
+      durationMinutes <= 0 ||
+      durationMinutes > maxDurationMinutes
+    ) {
+      res.status(400).json({ message: "Choose a valid activity duration." });
       return;
     }
 
@@ -225,9 +258,10 @@ router.post("/", async (req, res, next) => {
       mockId: await nextMockId(),
       user: user._id,
       group: group?._id,
-      time: "Just now",
       caption,
       image: imageUrl || undefined,
+      categories,
+      durationMinutes,
       likesCount: 0,
       comments: 0,
     });
@@ -242,6 +276,83 @@ router.post("/", async (req, res, next) => {
     }
 
     res.status(201).json(serializeFeedPost(savedPost));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const postId = Number(req.params.id);
+    const caption = getString(req.body?.caption);
+
+    if (!caption) {
+      res.status(400).json({ message: "Post caption cannot be empty." });
+      return;
+    }
+
+    if (caption.length > maxCaptionLength) {
+      res.status(400).json({ message: "Post caption is too long." });
+      return;
+    }
+
+    const post = await findOwnedFeedPost(postId, user);
+
+    if (!post) {
+      res.status(404).json({ message: "Post not found" });
+      return;
+    }
+
+    post.caption = caption;
+    await post.save();
+
+    const likedByCurrentUser = await LikeModel.exists({
+      post: post._id,
+      user: user._id,
+    });
+
+    res.json(
+      serializeFeedPost(post, {
+        likeCount: getPostLikeCount(post),
+        likedByCurrentUser: Boolean(likedByCurrentUser),
+      }),
+    );
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const postId = Number(req.params.id);
+    const post = await findOwnedFeedPost(postId, user);
+
+    if (!post) {
+      res.status(404).json({ message: "Post not found" });
+      return;
+    }
+
+    await Promise.all([
+      CommentModel.deleteMany({ post: post._id }),
+      LikeModel.deleteMany({ post: post._id }),
+      FeedPostModel.deleteOne({ _id: post._id }),
+    ]);
+
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

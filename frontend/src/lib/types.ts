@@ -1,4 +1,4 @@
-export type VitaCategory = "physical" | "social" | "cognitive" | "creative";
+export type vidaCategory = "physical" | "social" | "cognitive" | "creative";
 export type ActivityId = number;
 
 export type Friend = {
@@ -9,19 +9,26 @@ export type Friend = {
   joined: string[];
 };
 
+export type FriendSearchResult = {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+};
+
 type ActivityBase = {
   id: ActivityId;
   title: string;
   host: string;
-  date: string;
-  time: string;
+  startsAt: string;
   location: string;
   durationMinutes: number;
   spots: number;
   credits: number;
   rating: number;
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   joiningFriends: Friend[];
+  joinDisabledReason?: string;
 };
 
 export type PremiumActivity = ActivityBase & {
@@ -35,15 +42,14 @@ export type Activity = PremiumActivity | StandardActivity;
 
 export type CreateActivityInput = {
   title: string;
-  date: string;
-  time: string;
+  startsAt: string;
   location: string;
   latitude: number;
   longitude: number;
   durationMinutes: number;
   spots: number;
   credits: number;
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   groupId?: number;
 };
 
@@ -58,7 +64,7 @@ export type FeedPost = {
   user: string;
   handle: string;
   avatar: string;
-  time: string;
+  createdAt: string;
   caption: string;
   image?: string;
   likesCount: number;
@@ -66,7 +72,7 @@ export type FeedPost = {
   comments: number;
   activity?: string;
   durationMinutes?: number;
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   group?: FeedPostGroupReference;
 };
 
@@ -77,7 +83,6 @@ export type FeedComment = {
   handle: string;
   avatar: string;
   body: string;
-  time: string;
   createdAt: string;
 };
 
@@ -86,6 +91,15 @@ export type FeedPostGroupReference = {
   name: string;
   avatar: string;
   members: number;
+};
+
+export type Notification = {
+  id: string;
+  dateReceived: string;
+  title: string;
+  content: string;
+  link?: string;
+  read: boolean;
 };
 
 export type GroupMember = {
@@ -100,6 +114,12 @@ export type CreateFeedPostInput = {
   caption: string;
   image?: string;
   groupId?: number;
+  categories: vidaCategory[];
+  durationMinutes: number;
+};
+
+export type UpdateFeedPostInput = {
+  caption: string;
 };
 
 export type CreateFeedCommentInput = {
@@ -138,12 +158,11 @@ export type ChatActivityInvite = {
   activity: {
     id: ActivityId;
     title: string;
-    date: string;
-    time: string;
+    startsAt: string;
     location: string;
     durationMinutes: number;
     credits: number;
-    categories: VitaCategory[];
+    categories: vidaCategory[];
   };
   joiningFriends: Friend[];
 };
@@ -179,6 +198,10 @@ export type JoinGroupResponse = {
   group: GroupChat;
 };
 
+export type GroupMutationResponse = {
+  group: GroupChat;
+};
+
 export type MapPin = {
   id: number;
   activityId: ActivityId;
@@ -188,7 +211,7 @@ export type MapPin = {
   y: number;
   label: string;
   premium?: boolean;
-  categories?: VitaCategory[];
+  categories?: vidaCategory[];
 };
 
 export type ProfileStat = {

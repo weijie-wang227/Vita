@@ -3,7 +3,7 @@ import { findAuthenticatedUser } from "../auth.js";
 import {
   SettingsModel,
   type SettingsPreferences,
-} from "../models/VitaData.js";
+} from "../models/VidaData.js";
 
 const router = Router();
 
@@ -62,7 +62,7 @@ async function findOrCreateSettings(userId: unknown) {
       },
     },
     {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
       setDefaultsOnInsert: true,
       runValidators: true,

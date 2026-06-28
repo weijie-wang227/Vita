@@ -4,9 +4,12 @@ import {
   AdminModel,
   ActivityJoinModel,
   ActivityModel,
+  BlacklistModel,
   ChatMessageModel,
   ChatModel,
-} from "../models/VitaData.js";
+  FeedPostModel,
+  MapPinModel,
+} from "../models/VidaData.js";
 import { getChatPreview, getLatestChatPreviews } from "../chatPreviews.js";
 import { serializeChat, serializeChatMessage } from "../serializers.js";
 
@@ -99,6 +102,70 @@ async function isGroupAdmin(userId: unknown, groupId: unknown) {
   );
 
   return Boolean(admin);
+}
+
+async function deleteGroupById(groupObjectId: unknown) {
+  const activities = await ActivityModel.find({ chat: groupObjectId }).select("_id");
+  const activityIds = activities.map((activity: Record<string, any>) => activity._id);
+
+  if (activityIds.length > 0) {
+    await FeedPostModel.updateMany(
+      { activity: { $in: activityIds } },
+      { $unset: { activity: "" } },
+    );
+    await ActivityJoinModel.deleteMany({ activityId: { $in: activityIds } });
+    await MapPinModel.deleteMany({ activity: { $in: activityIds } });
+    await ActivityModel.deleteMany({ _id: { $in: activityIds } });
+  }
+
+  await Promise.all([
+    AdminModel.deleteMany({ group: groupObjectId }),
+    BlacklistModel.deleteMany({ group: groupObjectId }),
+    ChatMessageModel.deleteMany({ chat: groupObjectId }),
+    FeedPostModel.updateMany({ group: groupObjectId }, { $unset: { group: "" } }),
+    ChatModel.findByIdAndDelete(groupObjectId),
+  ]);
+}
+
+async function removeMemberFromGroup(group: Record<string, any>, userId: unknown) {
+  const activities = await ActivityModel.find({ chat: group._id }).select("_id");
+  const activityIds = activities.map((activity: Record<string, any>) => activity._id);
+
+  await ChatModel.updateOne(
+    { _id: group._id },
+    { $pull: { members: userId } },
+  );
+  await AdminModel.deleteOne({ group: group._id, user: userId });
+
+  if (activityIds.length > 0) {
+    await ActivityJoinModel.deleteMany({
+      userId,
+      activityId: { $in: activityIds },
+    });
+  }
+}
+
+async function ensureGroupHasAdmin(groupObjectId: unknown) {
+  const existingAdmin = await AdminModel.findOne({ group: groupObjectId }).select(
+    "_id",
+  );
+
+  if (existingAdmin) {
+    return;
+  }
+
+  const group = await ChatModel.findById(groupObjectId).select("members");
+  const firstMember = group?.members?.[0];
+
+  if (!firstMember) {
+    return;
+  }
+
+  await AdminModel.updateOne(
+    { group: groupObjectId, user: firstMember },
+    { $setOnInsert: { group: groupObjectId, user: firstMember } },
+    { upsert: true },
+  );
 }
 
 async function getJoiningUsersByActivityId(activities: Record<string, any>[]) {
@@ -211,6 +278,18 @@ router.post("/:id/join", async (req, res, next) => {
       return;
     }
 
+    const blacklist = await BlacklistModel.findOne({
+      user: user._id,
+      group: group._id,
+    }).select("_id");
+
+    if (blacklist) {
+      res.status(403).json({
+        message: "You cannot join this group because you are blacklisted.",
+      });
+      return;
+    }
+
     const updatedGroup = await ChatModel.findByIdAndUpdate(
       group._id,
       { $addToSet: { members: user._id } },
@@ -243,6 +322,206 @@ router.post("/:id/join", async (req, res, next) => {
         isAdmin,
         adminUserIds,
       ),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const groupId = Number(req.params.id);
+    const group = await ChatModel.findOne({ mockId: groupId }).select("_id");
+
+    if (!group) {
+      res.status(404).json({ message: "Group not found" });
+      return;
+    }
+
+    if (!(await isGroupAdmin(user._id, group._id))) {
+      res.status(403).json({ message: "Only group admins can delete groups." });
+      return;
+    }
+
+    await deleteGroupById(group._id);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id/members/me", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const groupId = Number(req.params.id);
+    const group = await findMemberChat(groupId, user._id);
+
+    if (!group) {
+      res.status(404).json({ message: "Group not found" });
+      return;
+    }
+
+    if ((group.members?.length ?? 0) <= 1) {
+      await deleteGroupById(group._id);
+      res.status(204).send();
+      return;
+    }
+
+    await removeMemberFromGroup(group, user._id);
+    await ensureGroupHasAdmin(group._id);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id/members/:memberId", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const groupId = Number(req.params.id);
+    const group = await ChatModel.findOne({ mockId: groupId }).populate("members");
+
+    if (!group) {
+      res.status(404).json({ message: "Group not found" });
+      return;
+    }
+
+    if (!(await isGroupAdmin(user._id, group._id))) {
+      res.status(403).json({ message: "Only group admins can remove members." });
+      return;
+    }
+
+    const targetMember = group.members.find(
+      (member: Record<string, any>) => String(member._id) === req.params.memberId,
+    );
+
+    if (!targetMember) {
+      res.status(404).json({ message: "Member not found in this group." });
+      return;
+    }
+
+    if (String(targetMember._id) === String(user._id)) {
+      res.status(400).json({ message: "Use leave group to remove yourself." });
+      return;
+    }
+
+    if (await isGroupAdmin(targetMember._id, group._id)) {
+      res.status(400).json({ message: "Admins cannot remove other admins." });
+      return;
+    }
+
+    await removeMemberFromGroup(group, targetMember._id);
+
+    const updatedGroup = await ChatModel.findById(group._id).populate("members");
+    const previews = updatedGroup
+      ? await getLatestChatPreviews([updatedGroup])
+      : new Map();
+    const adminUserIds = await findAdminUserIds(group._id);
+
+    res.json({
+      group: updatedGroup
+        ? serializeChat(
+            updatedGroup,
+            getChatPreview(previews, updatedGroup),
+            true,
+            adminUserIds,
+          )
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/blacklist/:memberId", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const groupId = Number(req.params.id);
+    const group = await ChatModel.findOne({ mockId: groupId }).populate("members");
+
+    if (!group) {
+      res.status(404).json({ message: "Group not found" });
+      return;
+    }
+
+    if (!(await isGroupAdmin(user._id, group._id))) {
+      res.status(403).json({ message: "Only group admins can blacklist members." });
+      return;
+    }
+
+    const targetMember = group.members.find(
+      (member: Record<string, any>) => String(member._id) === req.params.memberId,
+    );
+
+    if (!targetMember) {
+      res.status(404).json({ message: "Member not found in this group." });
+      return;
+    }
+
+    if (String(targetMember._id) === String(user._id)) {
+      res.status(400).json({ message: "You cannot blacklist yourself." });
+      return;
+    }
+
+    if (await isGroupAdmin(targetMember._id, group._id)) {
+      res.status(400).json({ message: "Admins cannot blacklist other admins." });
+      return;
+    }
+
+    await BlacklistModel.updateOne(
+      { group: group._id, user: targetMember._id },
+      {
+        $setOnInsert: {
+          group: group._id,
+          user: targetMember._id,
+          blacklistedBy: user._id,
+          reason: "You are blacklisted from this group.",
+        },
+      },
+      { upsert: true },
+    );
+    await removeMemberFromGroup(group, targetMember._id);
+
+    const updatedGroup = await ChatModel.findById(group._id).populate("members");
+    const previews = updatedGroup
+      ? await getLatestChatPreviews([updatedGroup])
+      : new Map();
+    const adminUserIds = await findAdminUserIds(group._id);
+
+    res.json({
+      group: updatedGroup
+        ? serializeChat(
+            updatedGroup,
+            getChatPreview(previews, updatedGroup),
+            true,
+            adminUserIds,
+          )
+        : null,
     });
   } catch (error) {
     next(error);

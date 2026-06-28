@@ -9,11 +9,13 @@ import type {
   Friend,
   GroupChat,
   MapPin,
+  Notification,
   PremiumActivity,
   Profile,
   SettingsPreferences,
   SignInInput,
   SignUpInput,
+  UpdateFeedPostInput,
   StandardActivity,
   UpdateProfileInput,
 } from "../lib/types";
@@ -44,6 +46,7 @@ export type AppState = {
   chatMessages: Record<number, ChatMessage[]>;
   friends: Friend[];
   mapPins: MapPin[];
+  notifications: Notification[];
   profile: Profile;
   joinedActivityIds: number[];
   likedPostIds: Record<number, boolean>;
@@ -53,6 +56,11 @@ export type AppState = {
   signUp: (input: SignUpInput) => Promise<void>;
   createActivity: (input: CreateActivityInput) => Promise<StandardActivity>;
   createFeedPost: (input: CreateFeedPostInput) => Promise<FeedPost>;
+  updateFeedPost: (
+    postId: number,
+    input: UpdateFeedPostInput,
+  ) => Promise<FeedPost>;
+  deleteFeedPost: (postId: number) => Promise<void>;
   loadFeedComments: (postId: number) => Promise<FeedComment[]>;
   createFeedComment: (
     postId: number,
@@ -67,6 +75,10 @@ export type AppState = {
   clearFriendInviteResult: () => void;
   joinActivity: (activityId: number) => Promise<GroupChat>;
   joinGroup: (groupId: number) => Promise<GroupChat>;
+  leaveGroup: (groupId: number) => Promise<void>;
+  deleteGroup: (groupId: number) => Promise<void>;
+  removeGroupMember: (groupId: number, memberId: string) => Promise<GroupChat>;
+  blacklistGroupMember: (groupId: number, memberId: string) => Promise<GroupChat>;
   loadGroupMessages: (groupId: number) => Promise<void>;
   sendGroupMessage: (groupId: number, body: string) => Promise<ChatMessage>;
   signOut: () => void;

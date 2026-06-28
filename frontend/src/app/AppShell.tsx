@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
-import type { VitaLogoLevels } from "../components/VitaProgressLogo";
+import type { VidaLogoLevels } from "../components/VidaProgressLogo";
 import { BottomNavigation } from "./BottomNavigation";
 import { emptyLogoLevels, logoPortionOrder } from "./logoState";
-import { VitaLogoOverlay } from "./VitaLogoOverlay";
+import { VidaLogoOverlay } from "./VidaLogoOverlay";
 
 const ActivitiesPage = lazy(() =>
   import("../pages/ActivitiesPage").then((module) => ({
@@ -43,7 +43,7 @@ const SettingsPage = lazy(() =>
 
 export function AppShell() {
   const location = useLocation();
-  const [logoLevels, setLogoLevels] = useState<VitaLogoLevels>(emptyLogoLevels);
+  const [logoLevels, setLogoLevels] = useState<VidaLogoLevels>(emptyLogoLevels);
   const [isLogoExpanded, setIsLogoExpanded] = useState(false);
   const [nextPortionIndex, setNextPortionIndex] = useState(0);
   const hasFullScreenView =
@@ -71,7 +71,7 @@ export function AppShell() {
       className="min-h-screen bg-background"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      <div className="vita-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden">
+      <div className="vida-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden">
         <div
           className={`absolute inset-0 overflow-hidden ${
             hasFullScreenView ? "bottom-0" : "bottom-20"
@@ -81,7 +81,10 @@ export function AppShell() {
             <Routes>
               <Route path="/" element={<Navigate to="/activities" replace />} />
               <Route path="/activities" element={<ActivitiesPage />} />
-              <Route path="/activities/:activityId" element={<ActivityDetailPage />} />
+              <Route
+                path="/activities/:activityId"
+                element={<ActivityDetailPage />}
+              />
               <Route path="/feed" element={<FeedPage />} />
               <Route path="/groups" element={<ChatPage />} />
               <Route path="/groups/:groupId" element={<GroupDetailPage />} />
@@ -93,7 +96,7 @@ export function AppShell() {
         </div>
 
         {!hasFullScreenView && isLogoExpanded && (
-          <VitaLogoOverlay
+          <VidaLogoOverlay
             levels={logoLevels}
             onAdvance={advanceLogoFill}
             onClose={() => setIsLogoExpanded(false)}

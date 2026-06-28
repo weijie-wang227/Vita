@@ -9,6 +9,7 @@ import {
   friends,
   groupChats,
   mapPins,
+  notifications,
   premiumActivities,
   profile,
   standardActivities,
@@ -17,6 +18,7 @@ import {
   AdminModel,
   ActivityJoinModel,
   ActivityModel,
+  BlacklistModel,
   ChatMessageModel,
   ChatModel,
   CommentModel,
@@ -24,9 +26,10 @@ import {
   FriendshipModel,
   LikeModel,
   MapPinModel,
+  NotificationModel,
   SettingsModel,
   UserModel,
-} from "./models/VitaData.js";
+} from "./models/VidaData.js";
 import type { ActivitySeed, PremiumActivitySeed } from "./data.js";
 
 const legacyCollections = [
@@ -61,7 +64,7 @@ const activityChatByTitle = new Map<string, number>([
 ]);
 
 function slugEmail(handle: string) {
-  return `${handle.replace(/^@/, "")}@vita.local`;
+  return `${handle.replace(/^@/, "")}@vida.local`;
 }
 
 function seedHandle(name: string) {
@@ -126,6 +129,7 @@ async function seed() {
       FriendshipModel.deleteMany(),
       ChatModel.deleteMany(),
       AdminModel.deleteMany(),
+      BlacklistModel.deleteMany(),
       ChatMessageModel.deleteMany(),
       ActivityModel.deleteMany(),
       ActivityJoinModel.deleteMany(),
@@ -133,6 +137,7 @@ async function seed() {
       FeedPostModel.deleteMany(),
       CommentModel.deleteMany(),
       LikeModel.deleteMany(),
+      NotificationModel.deleteMany(),
       SettingsModel.deleteMany(),
     ]);
 
@@ -337,8 +342,7 @@ async function seed() {
         mockId: activity.id,
         title: activity.title,
         host,
-        date: activity.date,
-        time: activity.time,
+        startsAt: new Date(activity.startsAt),
         location: activity.location,
         durationMinutes: activity.durationMinutes,
         spots: activity.spots,
@@ -416,11 +420,14 @@ async function seed() {
         mockId: post.id,
         user,
         activity: activityId,
-        time: post.time,
         caption: post.caption,
         image: post.image,
+        durationMinutes: activity.durationMinutes,
+        categories: activity.categories,
         likesCount: likeCountByPostId.get(post.id) ?? 0,
         comments: commentCountByPostId.get(post.id) ?? 0,
+        createdAt: new Date(Date.now() - post.minutesAgo * 60_000),
+        updatedAt: new Date(Date.now() - post.minutesAgo * 60_000),
       });
 
       feedPostByMockId.set(post.id, savedPost._id);
@@ -462,6 +469,25 @@ async function seed() {
         body: comment.body,
         createdAt,
         updatedAt: createdAt,
+      });
+    }
+
+    for (const notification of notifications) {
+      const user = requireSeedValue(
+        userByHandle.get(notification.handle),
+        `user ${notification.handle} for notification "${notification.title}"`,
+      );
+      const dateReceived = new Date(Date.now() - notification.minutesAgo * 60_000);
+
+      await NotificationModel.create({
+        user,
+        dateReceived,
+        title: notification.title,
+        content: notification.content,
+        link: notification.link,
+        read: notification.read,
+        createdAt: dateReceived,
+        updatedAt: dateReceived,
       });
     }
 

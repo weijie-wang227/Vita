@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { Types } from "mongoose";
 import { isMongoConnected } from "./db.js";
-import { UserModel, type UserDocument } from "./models/VitaData.js";
+import { UserModel, type UserDocument } from "./models/VidaData.js";
 
 type TokenPayload = {
   sub: string;
@@ -34,7 +34,7 @@ function getAuthSecret() {
     throw new Error("AUTH_SECRET is required in production.");
   }
 
-  return "vita-local-development-secret";
+  return "vida-local-development-secret";
 }
 
 function hashPassword(password: string, salt: string) {
@@ -109,7 +109,7 @@ export function normalizeHandle(handle: unknown, fallback: string) {
     .replace(/^@+/, "")
     .replace(/[^a-z0-9_]+/g, "");
 
-  return `@${(base || "vitauser").slice(0, 24)}`;
+  return `@${(base || "vidauser").slice(0, 24)}`;
 }
 
 export function isValidEmail(email: string) {

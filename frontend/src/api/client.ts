@@ -1,5 +1,5 @@
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
-const authTokenStorageKey = "vita.authToken";
+const authTokenStorageKey = "vida.authToken";
 
 type ApiRequestErrorDetails = {
   path: string;
@@ -100,5 +100,15 @@ export async function apiRequest<T>(
     });
   }
 
-  return response.json() as Promise<T>;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const responseBody = await response.text();
+
+  if (!responseBody) {
+    return undefined as T;
+  }
+
+  return JSON.parse(responseBody) as T;
 }

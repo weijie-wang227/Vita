@@ -15,9 +15,11 @@ import { FriendAvatars } from "../components/FriendAvatars";
 import {
   categoriesForActivity,
   categoryIcon,
+  formatActivityDate,
+  formatActivityTime,
   formatCredits,
   primaryActivityCategory,
-  vitaCategoryColor,
+  vidaCategoryColor,
 } from "../lib/activityPresentation";
 import type { Activity, PremiumActivity } from "../lib/types";
 import { useAppState } from "../state";
@@ -82,13 +84,20 @@ export function ActivityDetailPage() {
   const isPremium = isPremiumActivity(activity);
   const categories = categoriesForActivity(activity.categories);
   const primaryCategory = primaryActivityCategory(activity.categories);
-  const primaryColor = vitaCategoryColor[primaryCategory];
+  const primaryColor = vidaCategoryColor[primaryCategory];
   const joined = activity.joiningFriends.some(
     (friend) => friend.handle === profile.handle,
   );
+  const joinDisabledReason = activity.joinDisabledReason;
 
   const handleJoinActivity = async () => {
     setJoinError(null);
+
+    if (joinDisabledReason) {
+      setJoinError(joinDisabledReason);
+      return;
+    }
+
     setIsJoining(true);
 
     try {
@@ -174,9 +183,7 @@ export function ActivityDetailPage() {
               <Heart
                 size={17}
                 fill={liked ? "var(--brand-pink)" : "none"}
-                stroke={
-                  liked ? "var(--brand-pink)" : "var(--muted-foreground)"
-                }
+                stroke={liked ? "var(--brand-pink)" : "var(--muted-foreground)"}
               />
             </button>
           </div>
@@ -186,14 +193,14 @@ export function ActivityDetailPage() {
               <Calendar size={14} className="mb-2 text-accent" />
               <p className="text-[10px] text-muted-foreground">Date</p>
               <p className="text-xs font-semibold text-foreground">
-                {activity.date}
+                {formatActivityDate(activity.startsAt)}
               </p>
             </div>
             <div className="rounded-xl bg-card p-3 border border-border">
               <Clock size={14} className="mb-2 text-accent" />
               <p className="text-[10px] text-muted-foreground">Time</p>
               <p className="text-xs font-semibold text-foreground">
-                {activity.time}
+                {formatActivityTime(activity.startsAt)}
               </p>
             </div>
             <div className="rounded-xl bg-card p-3 border border-border">
@@ -243,12 +250,21 @@ export function ActivityDetailPage() {
             {joinError}
           </p>
         )}
+        {joinDisabledReason && !joinError && (
+          <p className="mb-2 rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+            {joinDisabledReason}
+          </p>
+        )}
         <button
           onClick={handleJoinActivity}
-          disabled={isJoining}
+          disabled={isJoining || Boolean(joinDisabledReason)}
           className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground active:scale-[0.99] transition-transform disabled:opacity-70"
         >
-          {isJoining ? "Joining..." : joined ? "Open group chat" : "Join activity"}
+          {isJoining
+            ? "Joining..."
+            : joined
+              ? "Open group chat"
+              : "Join activity"}
         </button>
       </div>
     </div>

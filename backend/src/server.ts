@@ -27,7 +27,7 @@ async function startServer() {
     const mongo = getMongoConnectionStatus();
 
     console.log(
-      `Vita backend running on http://localhost:${port} (MongoDB: ${mongo.state})`,
+      `vida backend running on http://localhost:${port} (MongoDB: ${mongo.state})`,
     );
   });
 }

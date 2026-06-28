@@ -1,4 +1,4 @@
-import type { VitaCategory } from "../../lib/types";
+import type { vidaCategory } from "../../lib/types";
 
 export type CreateActivityModalProps = {
   open: boolean;
@@ -13,7 +13,7 @@ export type CreateActivityFormState = {
   durationMinutes: string;
   spots: string;
   credits: string;
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   linkedGroupId: string;
 };
 

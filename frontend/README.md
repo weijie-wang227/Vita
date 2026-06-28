@@ -1,6 +1,6 @@
-# Vita Frontend
+# vida Frontend
 
-React/Vite mobile frontend for Vita, an activity discovery and group chat app.
+React/Vite mobile frontend for vida, an activity discovery and group chat app.
 
 ## Actual Features
 
@@ -18,7 +18,7 @@ React/Vite mobile frontend for Vita, an activity discovery and group chat app.
 - Like buttons for activities are local UI state only.
 - Post menus, sharing, notifications, profile editing, friend messaging, and group info buttons are visual only.
 - The profile QR code is a static visual and does not encode a real user profile link.
-- The Vita progress logo is local UI state and is not calculated from real activity history.
+- The vida progress logo is local UI state and is not calculated from real activity history.
 - The map assumes Singapore and uses a hardcoded "you are here" location.
 
 ## Notes

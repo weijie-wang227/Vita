@@ -2,18 +2,18 @@ import { Clock } from "lucide-react";
 import {
   categoryIcon,
   formatDuration,
-  vitaCategoryColor,
-  vitaCategoryLabel,
+  vidaCategoryColor,
+  vidaCategoryLabel,
 } from "../lib/activityPresentation";
-import type { VitaCategory } from "../lib/types";
+import type { vidaCategory } from "../lib/types";
 
 type ActivityCategoryIndicatorsProps = {
-  categories: VitaCategory[];
+  categories: vidaCategory[];
   durationMinutes?: number;
   variant?: "dots" | "pills";
 };
 
-function uniqueCategories(categories: VitaCategory[]) {
+function uniqueCategories(categories: vidaCategory[]) {
   return categories.filter(
     (category, index) => categories.indexOf(category) === index,
   );
@@ -30,7 +30,7 @@ export function ActivityCategoryIndicators({
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         {visibleCategories.map((category) => {
-          const color = vitaCategoryColor[category];
+          const color = vidaCategoryColor[category];
 
           return (
             <span
@@ -42,7 +42,7 @@ export function ActivityCategoryIndicators({
               }}
             >
               {categoryIcon(category, 11)}
-              {vitaCategoryLabel[category]}
+              {vidaCategoryLabel[category]}
             </span>
           );
         })}
@@ -60,13 +60,13 @@ export function ActivityCategoryIndicators({
     <div className="flex items-center gap-1.5">
       <div className="flex items-center -space-x-1">
         {visibleCategories.map((category) => {
-          const color = vitaCategoryColor[category];
+          const color = vidaCategoryColor[category];
 
           return (
             <span
               key={category}
               className="flex h-5 w-5 items-center justify-center rounded-full border border-card"
-              title={vitaCategoryLabel[category]}
+              title={vidaCategoryLabel[category]}
               style={{
                 backgroundColor: color,
                 color: "var(--accent-foreground)",

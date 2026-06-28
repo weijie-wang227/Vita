@@ -6,10 +6,10 @@ import {
   Timer,
   Users,
 } from "lucide-react";
-import type { GroupChat, VitaCategory } from "../../lib/types";
+import type { GroupChat, vidaCategory } from "../../lib/types";
 import { NumberStepper } from "./NumberStepper";
 import type { CreateActivityFormState } from "./types";
-import { VitaCategorySelector } from "./VitaCategorySelector";
+import { vidaCategorySelector } from "./vidaCategorySelector";
 
 export function ActivityDetailsFields({
   form,
@@ -19,7 +19,7 @@ export function ActivityDetailsFields({
 }: {
   form: CreateActivityFormState;
   adminGroups: GroupChat[];
-  onCategoryToggle: (category: VitaCategory) => void;
+  onCategoryToggle: (category: vidaCategory) => void;
   onFieldChange: <Key extends keyof CreateActivityFormState>(
     field: Key,
     value: CreateActivityFormState[Key],
@@ -109,7 +109,10 @@ export function ActivityDetailsFields({
         </label>
       </div>
 
-      <VitaCategorySelector value={form.categories} onToggle={onCategoryToggle} />
+      <vidaCategorySelector
+        value={form.categories}
+        onToggle={onCategoryToggle}
+      />
 
       <div className="grid grid-cols-2 gap-2">
         <NumberStepper

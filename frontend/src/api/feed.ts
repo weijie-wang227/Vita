@@ -6,6 +6,7 @@ import type {
   FeedCommentsResponse,
   FeedLikeResponse,
   FeedPost,
+  UpdateFeedPostInput,
 } from "../lib/types";
 
 export async function fetchFeedPosts() {
@@ -16,6 +17,22 @@ export async function createFeedPost(input: CreateFeedPostInput) {
   return apiRequest<FeedPost>("/feed", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export async function updateFeedPost(
+  postId: number,
+  input: UpdateFeedPostInput,
+) {
+  return apiRequest<FeedPost>(`/feed/${postId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteFeedPost(postId: number) {
+  return apiRequest<void>(`/feed/${postId}`, {
+    method: "DELETE",
   });
 }
 

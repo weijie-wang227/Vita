@@ -26,6 +26,16 @@ export type SettingsDocument = {
   preferences: SettingsPreferences;
 };
 
+export type NotificationDocument = {
+  _id: Types.ObjectId;
+  user: Types.ObjectId;
+  dateReceived: Date;
+  title: string;
+  content: string;
+  link?: string;
+  read: boolean;
+};
+
 const userSchema = new Schema<UserDocument>(
   {
     mockId: { type: Number, required: true, unique: true },
@@ -80,6 +90,19 @@ const settingsSchema = new Schema<SettingsDocument>(
 );
 settingsSchema.index({ user: 1 }, { unique: true });
 
+const notificationSchema = new Schema<NotificationDocument>(
+  {
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    dateReceived: { type: Date, required: true, default: () => new Date() },
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    content: { type: String, required: true, trim: true, maxlength: 500 },
+    link: { type: String, trim: true },
+    read: { type: Boolean, required: true, default: false },
+  },
+  { timestamps: true },
+);
+notificationSchema.index({ user: 1, dateReceived: -1 });
+
 const friendshipSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
@@ -114,6 +137,22 @@ const adminSchema = new Schema(
 adminSchema.index({ user: 1, group: 1 }, { unique: true });
 adminSchema.index({ group: 1 });
 
+const blacklistSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    group: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
+    blacklistedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    reason: {
+      type: String,
+      required: true,
+      default: "You are blacklisted from this group.",
+    },
+  },
+  { timestamps: true },
+);
+blacklistSchema.index({ user: 1, group: 1 }, { unique: true });
+blacklistSchema.index({ group: 1 });
+
 const chatMessageSchema = new Schema(
   {
     chat: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
@@ -136,8 +175,7 @@ const activitySchema = new Schema(
     mockId: { type: Number, required: true, unique: true },
     title: { type: String, required: true },
     host: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    date: { type: String, required: true },
-    time: { type: String, required: true },
+    startsAt: { type: Date, required: true },
     location: { type: String, required: true },
     durationMinutes: { type: Number, required: true },
     spots: { type: Number, required: true },
@@ -179,9 +217,10 @@ const feedPostSchema = new Schema(
     user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
     activity: { type: Schema.Types.ObjectId, ref: "Activity" },
     group: { type: Schema.Types.ObjectId, ref: "Chat" },
-    time: { type: String, required: true },
     caption: { type: String, required: true },
     image: { type: String },
+    durationMinutes: { type: Number },
+    categories: [{ type: String }],
     likesCount: { type: Number, required: true, default: 0 },
     comments: { type: Number, required: true, default: 0 },
   },
@@ -215,6 +254,11 @@ export const SettingsModel = mongoose.model<any>(
   settingsSchema,
   "settings",
 );
+export const NotificationModel = mongoose.model<any>(
+  "Notification",
+  notificationSchema,
+  "notifications",
+);
 export const FriendshipModel = mongoose.model(
   "Friendship",
   friendshipSchema,
@@ -222,6 +266,11 @@ export const FriendshipModel = mongoose.model(
 );
 export const ChatModel = mongoose.model<any>("Chat", chatSchema, "chats");
 export const AdminModel = mongoose.model<any>("Admin", adminSchema, "admins");
+export const BlacklistModel = mongoose.model<any>(
+  "Blacklist",
+  blacklistSchema,
+  "blacklists",
+);
 export const ChatMessageModel = mongoose.model<any>(
   "ChatMessage",
   chatMessageSchema,

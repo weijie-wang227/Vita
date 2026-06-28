@@ -45,14 +45,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --app-page-background: linear-gradient(180deg, #171625 0%, #211a2d 48%, #171b28 100%);
+  --app-page-background: linear-gradient(
+    180deg,
+    #171625 0%,
+    #211a2d 48%,
+    #171b28 100%
+  );
   --phone-shell-background:
     linear-gradient(180deg, rgba(244, 185, 80, 0.07), transparent 22%),
     linear-gradient(180deg, var(--background), #1b1a2a 54%, #171625);
 }
 
-.vita-theme-light {
-  --background: #f6f8f3;
+.vida-theme-light {
+  --background: #f3fbfc;
   --foreground: #1b2220;
   --card: #ffffff;
   --card-foreground: #1b2220;
@@ -60,38 +65,43 @@
   --popover-foreground: #1b2220;
   --primary: #1b2220;
   --primary-foreground: #ffffff;
-  --secondary: #e8eee8;
+  --secondary: #e6f1f3;
   --secondary-foreground: #1b2220;
-  --muted: #e8eee8;
-  --muted-foreground: #68736f;
-  --accent: #2f8a63;
-  --accent-foreground: #ffffff;
+  --muted: #e6f1f3;
+  --muted-foreground: #60737a;
+  --accent: #e8a82f;
+  --accent-foreground: #171625;
   --brand-ink: #1b2220;
-  --brand-shadow: rgba(28, 42, 35, 0.16);
+  --brand-shadow: rgba(22, 48, 54, 0.16);
   --destructive: #c82b46;
   --destructive-foreground: #ffffff;
-  --border: rgba(36, 50, 44, 0.13);
+  --border: rgba(35, 62, 68, 0.13);
   --input: transparent;
-  --input-background: #e8eee8;
-  --switch-background: #d7e1d9;
-  --ring: #2f8a63;
-  --chart-1: #2f8a63;
-  --chart-2: #d79421;
+  --input-background: #e6f1f3;
+  --switch-background: #d4e5e8;
+  --ring: #e8a82f;
+  --chart-1: #e8a82f;
+  --chart-2: #22a8bd;
   --chart-3: #c44991;
   --chart-4: #5368d8;
   --chart-5: #1b2220;
   --sidebar: #ffffff;
   --sidebar-foreground: #1b2220;
-  --sidebar-primary: #2f8a63;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8eee8;
+  --sidebar-primary: #e8a82f;
+  --sidebar-primary-foreground: #171625;
+  --sidebar-accent: #e6f1f3;
   --sidebar-accent-foreground: #1b2220;
-  --sidebar-border: rgba(36, 50, 44, 0.13);
-  --sidebar-ring: #2f8a63;
-  --app-page-background: linear-gradient(180deg, #f8fbf3 0%, #eef6f7 52%, #f6f8f3 100%);
+  --sidebar-border: rgba(35, 62, 68, 0.13);
+  --sidebar-ring: #e8a82f;
+  --app-page-background: linear-gradient(
+    180deg,
+    #f4fcff 0%,
+    #eaf7fb 52%,
+    #f3fbfc 100%
+  );
   --phone-shell-background:
-    linear-gradient(180deg, rgba(75, 209, 120, 0.12), transparent 22%),
-    linear-gradient(180deg, var(--background), #edf5f1 54%, #f8fbf3);
+    linear-gradient(180deg, rgba(34, 168, 189, 0.12), transparent 22%),
+    linear-gradient(180deg, var(--background), #eaf6f8 54%, #f4fcff);
 }
 
 .dark {
@@ -241,7 +251,12 @@
 
 @layer utilities {
   .scrollbar-minimal {
-    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent) transparent;
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--muted-foreground) 45%,
+        transparent
+      )
+      transparent;
     scrollbar-width: thin;
   }
 
@@ -263,11 +278,11 @@
     background: color-mix(in srgb, var(--accent) 55%, transparent);
   }
 
-  .vita-phone-shell {
+  .vida-phone-shell {
     background: var(--phone-shell-background);
   }
 
-  .vita-top-logo {
+  .vida-top-logo {
     position: absolute;
     top: 0.7rem;
     left: 50%;
@@ -280,7 +295,7 @@
     overflow: visible;
   }
 
-  .vita-top-logo__mark {
+  .vida-top-logo__mark {
     width: 3.65rem;
     background: transparent;
     border: 0;
@@ -288,8 +303,8 @@
     filter: drop-shadow(0 10px 16px var(--brand-shadow));
   }
 
-  .vita-logo-expand-button,
-  .vita-logo-close-button {
+  .vida-logo-expand-button,
+  .vida-logo-close-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -302,13 +317,13 @@
       border-color 150ms ease;
   }
 
-  .vita-logo-expand-button {
+  .vida-logo-expand-button {
     width: 1.85rem;
     height: 1.85rem;
     border-radius: 999px;
   }
 
-  .vita-logo-close-button {
+  .vida-logo-close-button {
     position: absolute;
     top: 1rem;
     right: 1rem;
@@ -317,13 +332,13 @@
     border-radius: 999px;
   }
 
-  .vita-logo-expand-button:active,
-  .vita-logo-close-button:active,
-  .vita-top-logo__mark:active {
+  .vida-logo-expand-button:active,
+  .vida-logo-close-button:active,
+  .vida-top-logo__mark:active {
     transform: scale(0.94);
   }
 
-  .vita-logo-overlay {
+  .vida-logo-overlay {
     position: absolute;
     inset: 0;
     z-index: 55;
@@ -334,7 +349,7 @@
     backdrop-filter: blur(3px);
   }
 
-  .vita-logo-overlay::before {
+  .vida-logo-overlay::before {
     content: "";
     position: absolute;
     width: min(72vw, 19rem);
@@ -342,40 +357,46 @@
     border-radius: 999px;
     background:
       radial-gradient(circle, rgba(244, 185, 80, 0.24), transparent 58%),
-      radial-gradient(circle at 38% 44%, rgba(75, 209, 120, 0.18), transparent 48%),
-      radial-gradient(circle at 62% 58%, rgba(101, 119, 255, 0.22), transparent 52%);
+      radial-gradient(
+        circle at 38% 44%,
+        rgba(75, 209, 120, 0.18),
+        transparent 48%
+      ),
+      radial-gradient(
+        circle at 62% 58%,
+        rgba(101, 119, 255, 0.22),
+        transparent 52%
+      );
     filter: blur(18px);
     opacity: 0.95;
     pointer-events: none;
   }
 
-  .vita-logo-overlay .vita-progress-logo {
-    filter:
-      drop-shadow(0 24px 38px rgba(8, 8, 18, 0.48))
+  .vida-logo-overlay .vida-progress-logo {
+    filter: drop-shadow(0 24px 38px rgba(8, 8, 18, 0.48))
       drop-shadow(0 0 28px rgba(244, 185, 80, 0.16));
   }
 
-  .vita-bottom-logo-button {
+  .vida-bottom-logo-button {
     margin-top: -1.75rem;
     padding-top: 0;
     color: var(--muted-foreground);
     overflow: visible;
   }
 
-  .vita-bottom-logo-button .vita-progress-logo {
+  .vida-bottom-logo-button .vida-progress-logo {
     width: 5.35rem;
-    filter:
-      drop-shadow(0 12px 18px rgba(8, 8, 18, 0.38))
+    filter: drop-shadow(0 12px 18px rgba(8, 8, 18, 0.38))
       drop-shadow(0 0 14px rgba(244, 185, 80, 0.16));
   }
 
-  .vita-auth-brand {
+  .vida-auth-brand {
     display: flex;
     align-items: center;
     gap: 1rem;
   }
 
-  .vita-progress-logo {
+  .vida-progress-logo {
     --logo-icon-size: 1.1rem;
     position: relative;
     width: 5.35rem;
@@ -384,54 +405,54 @@
     overflow: visible;
   }
 
-  .vita-progress-logo--expanded {
+  .vida-progress-logo--expanded {
     --logo-icon-size: 3rem;
     width: min(76vw, 21rem);
   }
 
-  .vita-progress-logo__svg {
+  .vida-progress-logo__svg {
     display: block;
     width: 100%;
     height: 100%;
     overflow: visible;
   }
 
-  .vita-progress-logo__portion {
+  .vida-progress-logo__portion {
     outline: none;
   }
 
-  .vita-progress-logo--interactive .vita-progress-logo__portion {
+  .vida-progress-logo--interactive .vida-progress-logo__portion {
     cursor: pointer;
   }
 
-  .vita-progress-logo__portion:focus-visible .vita-progress-logo__outline {
+  .vida-progress-logo__portion:focus-visible .vida-progress-logo__outline {
     stroke: rgba(255, 255, 255, 0.9);
     stroke-width: 3;
   }
 
-  .vita-progress-logo__empty {
+  .vida-progress-logo__empty {
     fill: #696773;
   }
 
-  .vita-progress-logo__fill {
+  .vida-progress-logo__fill {
     transition:
       height 180ms ease,
       y 180ms ease;
   }
 
-  .vita-progress-logo__outline {
+  .vida-progress-logo__outline {
     fill: none;
     stroke: rgba(255, 255, 255, 0.18);
     stroke-width: 1;
   }
 
-  .vita-progress-logo__icons {
+  .vida-progress-logo__icons {
     position: absolute;
     inset: 0;
     pointer-events: none;
   }
 
-  .vita-progress-logo__icon {
+  .vida-progress-logo__icon {
     position: absolute;
     width: var(--logo-icon-size);
     height: var(--logo-icon-size);
@@ -440,34 +461,35 @@
     transform: translate(-50%, -50%);
   }
 
-  .vita-progress-logo__icon--physical {
+  .vida-progress-logo__icon--physical {
     left: 25%;
     top: 29%;
   }
 
-  .vita-progress-logo__icon--social {
+  .vida-progress-logo__icon--social {
     left: 75%;
     top: 29%;
   }
 
-  .vita-progress-logo__icon--cognitive {
+  .vida-progress-logo__icon--cognitive {
     left: 38%;
     top: 65%;
   }
 
-  .vita-progress-logo__icon--creative {
+  .vida-progress-logo__icon--creative {
     left: 62%;
     top: 65%;
   }
 
-  .vita-logo-image {
+  .vida-logo-image {
     height: 100%;
     width: 100%;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
+    display: block;
   }
 
-  .vita-auth-logo {
+  .vida-auth-logo {
     width: 5.35rem;
     flex: 0 0 auto;
     background: transparent;

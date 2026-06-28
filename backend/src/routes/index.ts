@@ -4,6 +4,7 @@ import activityRoutes from "./activities.js";
 import authRoutes from "./auth.js";
 import feedRoutes from "./feed.js";
 import groupRoutes from "./groups.js";
+import notificationRoutes from "./notifications.js";
 import profileRoutes from "./profile.js";
 import settingsRoutes from "./settings.js";
 import uploadRoutes from "./uploads.js";
@@ -21,7 +22,7 @@ router.get("/health", (_req, res) => {
 
   res.json({
     status: mongo.connected ? "ok" : "degraded",
-    service: "Vita backend",
+    service: "vida backend",
     mongo,
   });
 });
@@ -47,6 +48,7 @@ router.use("/auth", authRoutes);
 router.use("/activities", activityRoutes);
 router.use("/feed", feedRoutes);
 router.use("/groups", groupRoutes);
+router.use("/notifications", notificationRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/uploads", uploadRoutes);
 router.use("/", profileRoutes);
