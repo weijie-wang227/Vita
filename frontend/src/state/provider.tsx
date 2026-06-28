@@ -13,7 +13,6 @@ import {
   signIn as requestSignIn,
   signUp as requestSignUp,
   unlikeFeedPost as requestUnlikeFeedPost,
-  updateProfile as requestUpdateProfile,
   updateSettingsPreferences as requestUpdateSettingsPreferences,
 } from "../api";
 import { getStoredThemeMode, persistThemeMode } from "../app/themeMode";
@@ -42,6 +41,7 @@ import {
   replaceActivity,
   upsertGroup,
 } from "./providerHelpers";
+import { useProfileActions } from "./profileActions";
 import type { AppState, AppTab } from "./types";
 
 const emptyProfile: Profile = {
@@ -210,6 +210,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setApiError,
     setSelectedActivityId,
     setSelectedGroupId,
+  });
+
+  const { updateProfile } = useProfileActions({
+    authUser,
+    profile,
+    setApiError,
+    setAuthUser,
+    setChatMessages,
+    setFeedComments,
+    setFeedPosts,
+    setGroupChats,
+    setProfile,
   });
 
   const addFriend = useCallback(async (friendId: string) => {
@@ -503,93 +515,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       },
       addFriend,
-      updateProfile: async (input) => {
-        const previousProfile = profile;
-        const currentUserId = authUser?.id;
-
-        try {
-          const updatedProfile = await requestUpdateProfile(input);
-
-          setProfile(updatedProfile);
-          setAuthUser((current) =>
-            current ? { ...current, ...updatedProfile } : current,
-          );
-          setFeedPosts((current) =>
-            current.map((post) =>
-              post.handle === previousProfile.handle
-                ? {
-                    ...post,
-                    user: updatedProfile.name,
-                    handle: updatedProfile.handle,
-                    avatar: updatedProfile.avatar,
-                  }
-                : post,
-            ),
-          );
-          setFeedComments((current) => {
-            const nextComments: Record<number, FeedComment[]> = {};
-
-            for (const [postId, comments] of Object.entries(current)) {
-              nextComments[Number(postId)] = comments.map((comment) =>
-                comment.handle === previousProfile.handle
-                  ? {
-                      ...comment,
-                      user: updatedProfile.name,
-                      handle: updatedProfile.handle,
-                      avatar: updatedProfile.avatar,
-                    }
-                  : comment,
-              );
-            }
-
-            return nextComments;
-          });
-          setGroupChats((current) =>
-            current.map((group) => ({
-              ...group,
-              memberList: group.memberList?.map((member) =>
-                member.id === currentUserId
-                  ? {
-                      ...member,
-                      name: updatedProfile.name,
-                      handle: updatedProfile.handle,
-                      avatar: updatedProfile.avatar,
-                    }
-                  : member,
-              ),
-            })),
-          );
-          setChatMessages((current) => {
-            const nextMessages: Record<number, ChatMessage[]> = {};
-
-            for (const [groupId, messages] of Object.entries(current)) {
-              nextMessages[Number(groupId)] = messages.map((message) =>
-                message.sender.id === currentUserId
-                  ? {
-                      ...message,
-                      sender: {
-                        ...message.sender,
-                        name: updatedProfile.name,
-                        handle: updatedProfile.handle,
-                        avatar: updatedProfile.avatar,
-                      },
-                    }
-                  : message,
-              );
-            }
-
-            return nextMessages;
-          });
-          setApiError(null);
-
-          return updatedProfile;
-        } catch (error) {
-          console.error("Unable to update profile", error);
-          const message = getErrorMessage(error, "Unable to update profile");
-          setApiError(message);
-          throw new Error(message);
-        }
-      },
+      updateProfile,
       updateSettingsPreferences: async (input) => {
         const previousPreferences = settingsPreferences;
 
@@ -772,6 +698,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinGroup,
       loadGroupMessages,
       sendGroupMessage,
+      updateProfile,
     ],
   );
 

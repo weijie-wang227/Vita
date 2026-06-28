@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { TouchEvent } from "react";
 import {
   CalendarCheck,
@@ -10,13 +10,22 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import { ActivityMap } from "../components/ActivityMap";
 import { BaseSearchBar } from "../components/BaseSearchBar";
 import { PremiumCard, StandardRow } from "../components/ActivityCards";
-import { CreateActivityModal } from "../components/CreateActivityModal";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 import type { Activity } from "../lib/types";
 import { useAppState } from "../state";
+
+const ActivityMap = lazy(() =>
+  import("../components/ActivityMap").then((module) => ({
+    default: module.ActivityMap,
+  })),
+);
+const CreateActivityModal = lazy(() =>
+  import("../components/CreateActivityModal").then((module) => ({
+    default: module.CreateActivityModal,
+  })),
+);
 
 function searchableActivityText(activity: Activity) {
   return [
@@ -194,7 +203,9 @@ export function ActivitiesPage() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <ActivityMap onClose={() => setShowMap(false)} />
+          <Suspense fallback={null}>
+            <ActivityMap onClose={() => setShowMap(false)} />
+          </Suspense>
         </div>
       ) : (
         <div
@@ -288,10 +299,14 @@ export function ActivitiesPage() {
         </FloatingActionButton>
       )}
 
-      <CreateActivityModal
-        open={createActivityOpen}
-        onClose={() => setCreateActivityOpen(false)}
-      />
+      {createActivityOpen && (
+        <Suspense fallback={null}>
+          <CreateActivityModal
+            open={createActivityOpen}
+            onClose={() => setCreateActivityOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
