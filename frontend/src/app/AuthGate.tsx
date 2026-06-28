@@ -115,7 +115,7 @@ function AuthScreen() {
                 <img src="/logo.png" alt="Vida" className="vida-logo-image" />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+                <p className="vida-auth-word text-3xl leading-none text-accent">
                   Vida
                 </p>
                 <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground">

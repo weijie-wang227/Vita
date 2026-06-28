@@ -396,6 +396,13 @@
     gap: 1rem;
   }
 
+  .vida-auth-word {
+    font-family: 'Holiday Free', 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
   .vida-progress-logo {
     --logo-icon-size: 1.1rem;
     position: relative;
