@@ -55,6 +55,31 @@ function formatRelativeTime(value: unknown) {
   }).format(date);
 }
 
+function getActivityCredits(activity: AnyDoc) {
+  const item = asObject(activity ?? {});
+  const credits = Number(item.credits);
+
+  if (Number.isFinite(credits)) {
+    return credits;
+  }
+
+  const price = Number(item.price);
+
+  if (Number.isFinite(price)) {
+    return price;
+  }
+
+  if (typeof item.price === "string") {
+    const match = item.price.match(/\d+(?:\.\d+)?/);
+
+    if (match) {
+      return Number(match[0]);
+    }
+  }
+
+  return 0;
+}
+
 export function serializeFriend(friendship: AnyDoc) {
   const item = asObject(friendship);
   const friend = asObject(item.friendId);
@@ -64,7 +89,6 @@ export function serializeFriend(friendship: AnyDoc) {
     name: friend.name,
     handle: friend.handle,
     avatar: friend.avatarUrl,
-    mutual: item.mutual,
     joined: item.joined ?? [],
   };
 }
@@ -177,7 +201,7 @@ export function serializeChatMessage(
               time: activity.time,
               location: activity.location,
               durationMinutes: activity.durationMinutes,
-              price: activity.price,
+              credits: getActivityCredits(activity),
               categories: (activity.categories ?? []) as VitaCategory[],
             },
             joiningFriends,
@@ -197,7 +221,6 @@ export function serializeActivity(activity: AnyDoc, joiningUsers: AnyDoc[] = [])
       name: friend.name,
       handle: friend.handle,
       avatar: friend.avatarUrl,
-      mutual: 0,
       joined: [],
     };
   });
@@ -210,7 +233,7 @@ export function serializeActivity(activity: AnyDoc, joiningUsers: AnyDoc[] = [])
     location: item.location,
     durationMinutes: item.durationMinutes,
     spots: item.spots,
-    price: item.price,
+    credits: getActivityCredits(item),
     rating: item.rating,
     categories: (item.categories ?? []) as VitaCategory[],
     joiningFriends,
@@ -235,7 +258,6 @@ export function serializeActivityJoinUser(user: AnyDoc) {
     name: friend.name,
     handle: friend.handle,
     avatar: friend.avatarUrl,
-    mutual: 0,
     joined: [],
   };
 }
@@ -272,7 +294,7 @@ export function serializeFeedPost(post: AnyDoc, metricsValue?: FeedPostMetrics) 
   const group = item.group ? asObject(item.group) : null;
   const metrics =
     typeof metricsValue === "number" ? { commentCount: metricsValue } : metricsValue;
-  const likeCount = metrics?.likeCount ?? item.likesCount ?? item.likes ?? 0;
+  const likeCount = metrics?.likeCount ?? item.likesCount ?? 0;
 
   return {
     id: item.mockId,
@@ -282,7 +304,6 @@ export function serializeFeedPost(post: AnyDoc, metricsValue?: FeedPostMetrics) 
     time: item.time,
     caption: item.caption,
     image: item.image || undefined,
-    likes: likeCount,
     likesCount: likeCount,
     likedByMe: metrics?.likedByCurrentUser ?? false,
     comments: metrics?.commentCount ?? item.comments,

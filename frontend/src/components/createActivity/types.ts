@@ -12,7 +12,7 @@ export type CreateActivityFormState = {
   location: string;
   durationMinutes: string;
   spots: string;
-  priceCredits: string;
+  credits: string;
   categories: VitaCategory[];
   linkedGroupId: string;
 };
@@ -55,7 +55,7 @@ export const initialFormState: CreateActivityFormState = {
   location: "",
   durationMinutes: "60",
   spots: "8",
-  priceCredits: "0",
+  credits: "0",
   categories: ["social"],
   linkedGroupId: "",
 };

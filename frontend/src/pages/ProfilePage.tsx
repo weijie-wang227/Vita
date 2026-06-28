@@ -1,17 +1,53 @@
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  AtSign,
   CheckCircle2,
+  Check,
+  FileText,
+  ImagePlus,
   Edit3,
+  Loader2,
   LogOut,
   MessageCircle,
   QrCode,
   Settings,
+  UserRound,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
+import { checkHandleAvailability } from "../api/profile";
+import { uploadImageToR2 } from "../api/uploads";
 import { BaseSearchBar } from "../components/BaseSearchBar";
 import { useAppState } from "../state";
+
+const maxProfileImageBytes = 3 * 1024 * 1024;
+const maxBioLength = 240;
+
+function normalizeProfileHandle(value: string, fallback: string) {
+  const base = (value || fallback)
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, "")
+    .replace(/[^a-z0-9_]+/g, "");
+
+  return `@${(base || "vitauser").slice(0, 24)}`;
+}
+
+function hasHandleCharacters(value: string) {
+  return /[a-z0-9_]/i.test(value.replace(/^@+/, ""));
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("Unable to read image."));
+    reader.readAsDataURL(file);
+  });
+}
 
 export function ProfilePage() {
   const {
@@ -25,11 +61,26 @@ export function ProfilePage() {
     showProfileFriends,
     openSettings,
     setShowProfileFriends,
+    updateProfile,
   } = useAppState();
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [shareFeedback, setShareFeedback] = useState("");
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [debouncedFriendSearchQuery, setDebouncedFriendSearchQuery] =
     useState("");
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState(profile.name);
+  const [editHandle, setEditHandle] = useState(profile.handle);
+  const [editBio, setEditBio] = useState(profile.bio);
+  const [editAvatar, setEditAvatar] = useState(profile.avatar);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState("");
+  const [editImageName, setEditImageName] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [handleStatus, setHandleStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const inviteUrl =
     authUser?.id && typeof window !== "undefined"
       ? `${window.location.origin}/profile?friendId=${encodeURIComponent(
@@ -43,7 +94,6 @@ export function ProfilePage() {
         [
           friend.name,
           friend.handle,
-          `${friend.mutual} mutual`,
           friend.joined.join(" "),
         ]
           .join(" ")
@@ -51,6 +101,132 @@ export function ProfilePage() {
           .includes(activeFriendSearchQuery),
       )
     : friends;
+  const editedAvatarSrc = editAvatarPreview || editAvatar;
+  const handleNotice =
+    handleStatus === "checking"
+      ? "Checking handle"
+      : handleStatus === "available"
+        ? "Handle available"
+        : handleStatus === "taken"
+          ? "That handle is already in use. Please choose another."
+          : "";
+
+  const openEditProfile = () => {
+    setEditName(profile.name);
+    setEditHandle(profile.handle);
+    setEditBio(profile.bio);
+    setEditAvatar(profile.avatar);
+    setEditAvatarFile(null);
+    setEditAvatarPreview("");
+    setEditImageName("");
+    setEditError(null);
+    setHandleStatus("idle");
+    setIsEditProfileOpen(true);
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
+
+  const closeEditProfile = () => {
+    if (isSavingProfile) {
+      return;
+    }
+
+    setIsEditProfileOpen(false);
+    setEditError(null);
+  };
+
+  const ensureHandleAvailable = async (candidate: string) => {
+    if (!candidate.trim() || !hasHandleCharacters(candidate)) {
+      setHandleStatus("taken");
+      setEditError("Handle must include letters, numbers, or underscores.");
+      return null;
+    }
+
+    const normalizedHandle = normalizeProfileHandle(candidate, editName);
+    setEditHandle(normalizedHandle);
+
+    if (normalizedHandle === profile.handle) {
+      setHandleStatus("idle");
+      return normalizedHandle;
+    }
+
+    setHandleStatus("checking");
+
+    const availability = await checkHandleAvailability(normalizedHandle);
+    setEditHandle(availability.handle);
+
+    if (!availability.available) {
+      setHandleStatus("taken");
+      setEditError(
+        availability.message ||
+          "That handle is already in use. Please choose another.",
+      );
+      return null;
+    }
+
+    setHandleStatus("available");
+    setEditError(null);
+    return availability.handle;
+  };
+
+  const handleEditHandleBlur = async () => {
+    try {
+      await ensureHandleAvailable(editHandle);
+    } catch (error) {
+      setHandleStatus("idle");
+      setEditError(
+        error instanceof Error ? error.message : "Unable to check handle.",
+      );
+    }
+  };
+
+  const handleProfileImageChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setEditError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setEditError("Choose a PNG, JPEG, or WebP image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maxProfileImageBytes) {
+      setEditError("Choose an image under 3 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+
+      setEditAvatarFile(file);
+      setEditAvatarPreview(dataUrl);
+      setEditImageName(file.name);
+    } catch (error) {
+      setEditError(
+        error instanceof Error ? error.message : "Unable to read image.",
+      );
+    }
+  };
+
+  const clearProfileImageFile = () => {
+    setEditAvatarFile(null);
+    setEditAvatarPreview("");
+    setEditImageName("");
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
 
   const handleShareProfileLink = async () => {
     if (!inviteUrl) {
@@ -87,6 +263,53 @@ export function ProfilePage() {
     }
   };
 
+  const handleEditProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const name = editName.trim();
+    const bio = editBio.trim();
+
+    if (!name) {
+      setEditError("Name is required.");
+      return;
+    }
+
+    if (bio.length > maxBioLength) {
+      setEditError(`Bio must be ${maxBioLength} characters or less.`);
+      return;
+    }
+
+    setEditError(null);
+    setIsSavingProfile(true);
+
+    try {
+      const availableHandle = await ensureHandleAvailable(editHandle);
+
+      if (!availableHandle) {
+        return;
+      }
+
+      const avatar = editAvatarFile
+        ? await uploadImageToR2(editAvatarFile, "profiles")
+        : editAvatar.trim();
+
+      await updateProfile({
+        name,
+        handle: availableHandle,
+        bio,
+        avatar,
+      });
+      setIsEditProfileOpen(false);
+      clearProfileImageFile();
+    } catch (error) {
+      setEditError(
+        error instanceof Error ? error.message : "Unable to update profile.",
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   return (
     <div className="relative flex flex-col h-full bg-background">
       <div className="flex items-center gap-3 px-4 pt-5 pb-4">
@@ -103,6 +326,7 @@ export function ProfilePage() {
         </button>
         <button
           type="button"
+          onClick={openEditProfile}
           className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
           aria-label="Edit profile"
         >
@@ -119,9 +343,6 @@ export function ProfilePage() {
                 alt={profile.name}
                 className="w-full h-full object-cover"
               />
-            </div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-accent flex items-center justify-center border-2 border-background">
-              <Edit3 size={10} color="var(--accent-foreground)" />
             </div>
           </div>
           <h2 className="text-lg font-bold text-foreground">{profile.name}</h2>
@@ -262,7 +483,7 @@ export function ProfilePage() {
                       {friend.name}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      {friend.mutual} mutual / {friend.joined[0] ?? "Just connected"}
+                      {friend.joined[0] ?? "Just connected"}
                     </p>
                   </div>
                   <button
@@ -315,6 +536,199 @@ export function ProfilePage() {
               Done
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {isEditProfileOpen ? (
+        <div className="absolute inset-0 z-40 flex flex-col bg-background">
+          <div className="flex items-center gap-3 border-b border-border px-4 pb-3 pt-5">
+            <button
+              type="button"
+              onClick={closeEditProfile}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-foreground"
+              aria-label="Close edit profile"
+            >
+              <X size={16} />
+            </button>
+            <h2 className="min-w-0 flex-1 truncate text-base font-bold text-foreground">
+              Edit Profile
+            </h2>
+            <button
+              type="submit"
+              form="edit-profile-form"
+              disabled={isSavingProfile || handleStatus === "checking"}
+              className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-bold text-accent-foreground disabled:opacity-65"
+            >
+              {isSavingProfile ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Check size={13} />
+              )}
+              {isSavingProfile ? "Saving" : "Save"}
+            </button>
+          </div>
+
+          <form
+            id="edit-profile-form"
+            onSubmit={handleEditProfileSubmit}
+            className="flex-1 overflow-y-auto px-4 pb-6 pt-4 scrollbar-minimal"
+          >
+            <div className="mb-5 flex flex-col items-center">
+              <div className="h-24 w-24 overflow-hidden rounded-full border-2 border-accent bg-secondary">
+                {editedAvatarSrc ? (
+                  <img
+                    src={editedAvatarSrc}
+                    alt={editName || "Profile photo"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <UserRound size={24} className="text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleProfileImageChange}
+              />
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-semibold text-foreground"
+                >
+                  <ImagePlus size={13} className="text-muted-foreground" />
+                  Choose photo
+                </button>
+                {editAvatarFile ? (
+                  <button
+                    type="button"
+                    onClick={clearProfileImageFile}
+                    className="flex h-9 items-center rounded-full border border-border px-3 text-xs font-semibold text-muted-foreground"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+              {editImageName ? (
+                <p className="mt-2 max-w-full truncate text-[11px] text-muted-foreground">
+                  {editImageName}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Profile photo URL
+                </span>
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-input-background px-3">
+                  <ImagePlus size={16} className="text-muted-foreground" />
+                  <input
+                    value={editAvatar}
+                    onChange={(event) => {
+                      setEditAvatar(event.target.value);
+                      setEditAvatarPreview("");
+                      setEditAvatarFile(null);
+                      setEditImageName("");
+                    }}
+                    className="h-12 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    placeholder="https://..."
+                    type="url"
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Name
+                </span>
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-input-background px-3">
+                  <UserRound size={16} className="text-muted-foreground" />
+                  <input
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    className="h-12 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    placeholder="Your name"
+                    autoComplete="name"
+                    maxLength={80}
+                    required
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Handle
+                </span>
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-input-background px-3">
+                  <AtSign size={16} className="text-muted-foreground" />
+                  <input
+                    value={editHandle}
+                    onBlur={handleEditHandleBlur}
+                    onChange={(event) => {
+                      setEditHandle(event.target.value);
+                      setHandleStatus("idle");
+                      setEditError(null);
+                    }}
+                    className="h-12 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    placeholder="yourhandle"
+                    autoComplete="username"
+                    required
+                  />
+                </div>
+                {handleNotice ? (
+                  <p
+                    className={`mt-1.5 flex items-center gap-1 text-[11px] ${
+                      handleStatus === "taken"
+                        ? "text-destructive-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                    aria-live="polite"
+                  >
+                    {handleStatus === "checking" ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : null}
+                    {handleNotice}
+                  </p>
+                ) : null}
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Bio
+                </span>
+                <div className="flex gap-2 rounded-2xl border border-border bg-input-background px-3 py-3">
+                  <FileText
+                    size={16}
+                    className="mt-0.5 flex-shrink-0 text-muted-foreground"
+                  />
+                  <textarea
+                    value={editBio}
+                    onChange={(event) => setEditBio(event.target.value)}
+                    className="min-h-24 min-w-0 flex-1 resize-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
+                    placeholder="Share a little about yourself"
+                    maxLength={maxBioLength}
+                  />
+                </div>
+                <p className="mt-1.5 text-right text-[10px] text-muted-foreground">
+                  {editBio.length}/{maxBioLength}
+                </p>
+              </label>
+            </div>
+
+            {editError ? (
+              <p
+                className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground"
+                aria-live="polite"
+              >
+                {editError}
+              </p>
+            ) : null}
+          </form>
         </div>
       ) : null}
     </div>

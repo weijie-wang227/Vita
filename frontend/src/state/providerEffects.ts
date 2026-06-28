@@ -8,9 +8,11 @@ import {
   fetchMapPins,
   fetchPremiumActivities,
   fetchProfile,
+  fetchSettingsPreferences,
   fetchStandardActivities,
   getAuthToken,
 } from "../api";
+import { persistThemeMode } from "../app/themeMode";
 import type {
   AuthUser,
   Activity,
@@ -20,6 +22,7 @@ import type {
   MapPin,
   PremiumActivity,
   Profile,
+  SettingsPreferences,
   StandardActivity,
 } from "../lib/types";
 import { activityIdsJoinedByProfile } from "./providerHelpers";
@@ -92,6 +95,7 @@ export function useLoadAppData({
   setPremiumActivities,
   setJoinedActivityIds,
   setProfile,
+  setSettingsPreferences,
   setStandardActivities,
 }: {
   authUser: AuthUser | null;
@@ -105,6 +109,7 @@ export function useLoadAppData({
   setPremiumActivities: Setter<PremiumActivity[]>;
   setJoinedActivityIds: Setter<number[]>;
   setProfile: Setter<Profile>;
+  setSettingsPreferences: Setter<SettingsPreferences>;
   setStandardActivities: Setter<StandardActivity[]>;
 }) {
   useEffect(() => {
@@ -127,6 +132,7 @@ export function useLoadAppData({
           nextFriends,
           nextMapPins,
           nextProfile,
+          nextSettingsPreferences,
         ] = await Promise.all([
           fetchPremiumActivities(),
           fetchStandardActivities(),
@@ -135,6 +141,7 @@ export function useLoadAppData({
           fetchFriends(),
           fetchMapPins(),
           fetchProfile(),
+          fetchSettingsPreferences(),
         ]);
 
         if (ignore) {
@@ -157,6 +164,8 @@ export function useLoadAppData({
         setFriends(nextFriends);
         setMapPins(nextMapPins);
         setProfile(nextProfile);
+        setSettingsPreferences(nextSettingsPreferences);
+        persistThemeMode(nextSettingsPreferences.appearance);
         setApiError(null);
       } catch (error) {
         if (!ignore) {
@@ -187,6 +196,7 @@ export function useLoadAppData({
     setPremiumActivities,
     setJoinedActivityIds,
     setProfile,
+    setSettingsPreferences,
     setStandardActivities,
   ]);
 }

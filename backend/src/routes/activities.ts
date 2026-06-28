@@ -83,7 +83,9 @@ function formatTime(value: string) {
   return `${displayHour}:${minutes} ${suffix}`;
 }
 
-async function nextMockId(model: typeof ActivityModel) {
+async function nextMockId(
+  model: typeof ActivityModel | typeof ChatModel | typeof MapPinModel,
+) {
   const lastItem = await model.findOne().sort({ mockId: -1 }).select("mockId");
 
   return (lastItem?.mockId ?? 0) + 1;
@@ -170,7 +172,7 @@ router.post("/", async (req, res, next) => {
     const longitude = getFiniteNumber(req.body?.longitude);
     const durationMinutes = getFiniteNumber(req.body?.durationMinutes);
     const spots = getFiniteNumber(req.body?.spots);
-    const price = getString(req.body?.price) || "0 credits";
+    const credits = getFiniteNumber(req.body?.credits ?? 0);
     const linkedGroupId =
       req.body?.groupId === undefined ||
       req.body?.groupId === null ||
@@ -214,6 +216,11 @@ router.post("/", async (req, res, next) => {
 
     if (spots === null || spots < 1) {
       res.status(400).json({ message: "Spots must be at least 1." });
+      return;
+    }
+
+    if (credits === null || credits < 0) {
+      res.status(400).json({ message: "Credits cannot be negative." });
       return;
     }
 
@@ -284,7 +291,7 @@ router.post("/", async (req, res, next) => {
       location,
       durationMinutes: Math.round(durationMinutes),
       spots: Math.round(spots),
-      price,
+      credits,
       rating: 5,
       categories,
       chat: chat._id,

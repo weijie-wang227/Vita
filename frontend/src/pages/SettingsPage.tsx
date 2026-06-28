@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Bell,
   ChevronLeft,
@@ -13,11 +12,8 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import {
-  getStoredThemeMode,
-  persistThemeMode,
-  type VitaThemeMode,
-} from "../app/themeMode";
+import type { VitaThemeMode } from "../app/themeMode";
+import type { SettingsPreferences } from "../lib/types";
 import { useAppState } from "../state";
 
 type SettingToggleProps = {
@@ -139,17 +135,24 @@ function ThemeModeSelector({ mode, onModeChange }: ThemeModeSelectorProps) {
 }
 
 export function SettingsPage() {
-  const { authUser, closeSettings, profile, signOut } = useAppState();
-  const [themeMode, setThemeMode] = useState<VitaThemeMode>(() =>
-    getStoredThemeMode(),
-  );
-  const [activityReminders, setActivityReminders] = useState(true);
-  const [friendDiscovery, setFriendDiscovery] = useState(true);
-  const [privateHistory, setPrivateHistory] = useState(false);
+  const {
+    authUser,
+    closeSettings,
+    profile,
+    settingsPreferences,
+    signOut,
+    updateSettingsPreferences,
+  } = useAppState();
+
+  const savePreferences = (patch: Partial<SettingsPreferences>) => {
+    void updateSettingsPreferences({
+      ...settingsPreferences,
+      ...patch,
+    }).catch(() => undefined);
+  };
 
   const handleThemeModeChange = (mode: VitaThemeMode) => {
-    setThemeMode(mode);
-    persistThemeMode(mode);
+    savePreferences({ appearance: mode });
   };
 
   return (
@@ -202,32 +205,45 @@ export function SettingsPage() {
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
           <ThemeModeSelector
-            mode={themeMode}
+            mode={settingsPreferences.appearance}
             onModeChange={handleThemeModeChange}
           />
         </section>
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
           <SettingToggle
-            checked={activityReminders}
+            checked={settingsPreferences.activityReminders}
             description="Activity starts, group updates, and host messages."
             icon={Bell}
             label="Activity reminders"
-            onToggle={() => setActivityReminders((current) => !current)}
+            onToggle={() =>
+              savePreferences({
+                activityReminders: !settingsPreferences.activityReminders,
+              })
+            }
           />
           <SettingToggle
-            checked={friendDiscovery}
+            checked={settingsPreferences.friendDiscovery}
             description="Let friends find you with your handle and QR invite."
             icon={UserRound}
             label="Friend discovery"
-            onToggle={() => setFriendDiscovery((current) => !current)}
+            onToggle={() =>
+              savePreferences({
+                friendDiscovery: !settingsPreferences.friendDiscovery,
+              })
+            }
           />
           <SettingToggle
-            checked={privateHistory}
+            checked={settingsPreferences.privateActivityHistory}
             description="Hide past activities from profile visitors."
             icon={Lock}
             label="Private activity history"
-            onToggle={() => setPrivateHistory((current) => !current)}
+            onToggle={() =>
+              savePreferences({
+                privateActivityHistory:
+                  !settingsPreferences.privateActivityHistory,
+              })
+            }
           />
         </section>
 

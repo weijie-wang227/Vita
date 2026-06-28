@@ -522,7 +522,7 @@ export function FeedPage() {
                       strokeWidth={1.5}
                     />
                     <span className="text-xs text-muted-foreground">
-                      {post.likesCount ?? post.likes}
+                      {post.likesCount}
                     </span>
                   </button>
                   <button

@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type {
+  ActivityId,
   CreateActivityInput,
   CreateActivityResponse,
   JoinActivityResponse,
@@ -27,7 +28,7 @@ export async function createActivity(input: CreateActivityInput) {
   });
 }
 
-export async function joinActivity(activityId: number) {
+export async function joinActivity(activityId: ActivityId) {
   return apiRequest<JoinActivityResponse>(`/activities/${activityId}/join`, {
     method: "POST",
   });

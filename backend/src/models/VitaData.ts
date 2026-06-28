@@ -13,11 +13,30 @@ export type UserDocument = {
   stats?: { label: string; value: string }[];
 };
 
+export type SettingsPreferences = {
+  appearance: "light" | "dark";
+  activityReminders: boolean;
+  friendDiscovery: boolean;
+  privateActivityHistory: boolean;
+};
+
+export type SettingsDocument = {
+  _id: Types.ObjectId;
+  user: Types.ObjectId;
+  preferences: SettingsPreferences;
+};
+
 const userSchema = new Schema<UserDocument>(
   {
     mockId: { type: Number, required: true, unique: true },
-    name: { type: String, required: true },
-    handle: { type: String, required: true, unique: true },
+    name: { type: String, required: true, trim: true },
+    handle: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     email: { type: String, required: true, unique: true },
     avatarUrl: { type: String, required: true },
     passwordHash: { type: String, select: false },
@@ -33,11 +52,38 @@ const userSchema = new Schema<UserDocument>(
   { timestamps: true },
 );
 
+const settingsPreferencesSchema = new Schema<SettingsPreferences>(
+  {
+    appearance: {
+      type: String,
+      enum: ["light", "dark"],
+      required: true,
+      default: "dark",
+    },
+    activityReminders: { type: Boolean, required: true, default: true },
+    friendDiscovery: { type: Boolean, required: true, default: true },
+    privateActivityHistory: { type: Boolean, required: true, default: false },
+  },
+  { _id: false },
+);
+
+const settingsSchema = new Schema<SettingsDocument>(
+  {
+    user: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    preferences: {
+      type: settingsPreferencesSchema,
+      required: true,
+      default: () => ({}),
+    },
+  },
+  { timestamps: true },
+);
+settingsSchema.index({ user: 1 }, { unique: true });
+
 const friendshipSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
     friendId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    mutual: { type: Number, required: true, default: 0 },
     joined: [{ type: String, required: true }],
   },
   { timestamps: true },
@@ -95,7 +141,7 @@ const activitySchema = new Schema(
     location: { type: String, required: true },
     durationMinutes: { type: Number, required: true },
     spots: { type: Number, required: true },
-    price: { type: String, required: true },
+    credits: { type: Number, required: true, default: 0, min: 0 },
     rating: { type: Number, required: true },
     categories: [{ type: String, required: true }],
     chat: { type: Schema.Types.ObjectId, required: true, ref: "Chat" },
@@ -136,7 +182,6 @@ const feedPostSchema = new Schema(
     time: { type: String, required: true },
     caption: { type: String, required: true },
     image: { type: String },
-    likes: { type: Number, required: true, default: 0 },
     likesCount: { type: Number, required: true, default: 0 },
     comments: { type: Number, required: true, default: 0 },
   },
@@ -165,6 +210,11 @@ likeSchema.index({ post: 1, user: 1 }, { unique: true });
 likeSchema.index({ user: 1, createdAt: -1 });
 
 export const UserModel = mongoose.model<any>("User", userSchema, "users");
+export const SettingsModel = mongoose.model<any>(
+  "Settings",
+  settingsSchema,
+  "settings",
+);
 export const FriendshipModel = mongoose.model(
   "Friendship",
   friendshipSchema,

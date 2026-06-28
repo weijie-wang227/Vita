@@ -60,27 +60,36 @@ async function findVisibleFeedPost(postId: number, user: Record<string, any>) {
 function getPostLikeCount(post: Record<string, any>) {
   const item = asObject(post);
 
-  return Number(item.likesCount ?? item.likes ?? 0);
+  return Number(item.likesCount ?? 0);
 }
 
 async function ensurePostLikeCount(post: Record<string, any>) {
   const item = asObject(post);
+  const update: Record<string, any> = {
+    $unset: { likes: "" },
+  };
 
   if (typeof item.likesCount === "number") {
-    return;
+    await FeedPostModel.findByIdAndUpdate(item._id, update, { strict: false });
+    return Number(item.likesCount);
   }
 
-  await FeedPostModel.findByIdAndUpdate(item._id, {
-    likesCount: Number(item.likes ?? 0),
-  });
+  const likeCount = await LikeModel.countDocuments({ post: item._id });
+
+  update.$set = {
+    likesCount: likeCount,
+  };
+
+  await FeedPostModel.findByIdAndUpdate(item._id, update, { strict: false });
+  return likeCount;
 }
 
 async function adjustPostLikeCount(postObjectId: unknown, delta: number) {
   const updatedPost = await FeedPostModel.findByIdAndUpdate(
     postObjectId,
-    { $inc: { likesCount: delta, likes: delta } },
-    { new: true },
-  ).select("likes likesCount");
+    { $inc: { likesCount: delta }, $unset: { likes: "" } },
+    { new: true, strict: false },
+  ).select("likesCount");
 
   return updatedPost ? getPostLikeCount(updatedPost) : 0;
 }
@@ -169,7 +178,7 @@ router.post("/", async (req, res, next) => {
     }
 
     const caption = getString(req.body?.caption);
-    const imageUrl = getString(req.body?.image ?? req.body?.imageUrl);
+    const imageUrl = getString(req.body?.image);
     const groupId =
       req.body?.groupId === undefined || req.body?.groupId === null
         ? null
@@ -219,7 +228,6 @@ router.post("/", async (req, res, next) => {
       time: "Just now",
       caption,
       image: imageUrl || undefined,
-      likes: 0,
       likesCount: 0,
       comments: 0,
     });
@@ -256,6 +264,7 @@ router.post("/:id/likes", async (req, res, next) => {
       return;
     }
 
+    let likeCount = await ensurePostLikeCount(post);
     const result = await LikeModel.updateOne(
       { post: post._id, user: user._id },
       { $setOnInsert: { post: post._id, user: user._id } },
@@ -265,16 +274,13 @@ router.post("/:id/likes", async (req, res, next) => {
       (result as Record<string, any>).upsertedCount ||
         (result as Record<string, any>).upsertedId,
     );
-    let likeCount = getPostLikeCount(post);
 
     if (createdLike) {
-      await ensurePostLikeCount(post);
       likeCount = await adjustPostLikeCount(post._id, 1);
     }
 
     res.status(201).json({
       postId: post.mockId,
-      likes: likeCount,
       likesCount: likeCount,
       likedByMe: true,
     });
@@ -300,17 +306,15 @@ router.delete("/:id/likes", async (req, res, next) => {
       return;
     }
 
+    let likeCount = await ensurePostLikeCount(post);
     const result = await LikeModel.deleteOne({ post: post._id, user: user._id });
-    let likeCount = getPostLikeCount(post);
 
     if (result.deletedCount > 0) {
-      await ensurePostLikeCount(post);
       likeCount = await adjustPostLikeCount(post._id, -1);
     }
 
     res.json({
       postId: post.mockId,
-      likes: likeCount,
       likesCount: likeCount,
       likedByMe: false,
     });

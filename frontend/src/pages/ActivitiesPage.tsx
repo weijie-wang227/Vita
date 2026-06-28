@@ -25,7 +25,7 @@ function searchableActivityText(activity: Activity) {
     activity.date,
     activity.time,
     activity.location,
-    activity.price,
+    String(activity.credits),
     // activity.rating,
     activity.categories.join(" "),
     activity.joiningFriends

@@ -15,6 +15,7 @@ import { FriendAvatars } from "../components/FriendAvatars";
 import {
   categoriesForActivity,
   categoryIcon,
+  formatCredits,
   primaryActivityCategory,
   vitaCategoryColor,
 } from "../lib/activityPresentation";
@@ -206,7 +207,7 @@ export function ActivityDetailPage() {
               <Users size={14} className="mb-2 text-accent" />
               <p className="text-[10px] text-muted-foreground">Spots</p>
               <p className="text-xs font-semibold text-foreground">
-                {activity.spots} open / {activity.price}
+                {activity.spots} open / {formatCredits(activity.credits)}
               </p>
             </div>
           </div>

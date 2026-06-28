@@ -66,3 +66,7 @@ export function formatDuration(minutes: number) {
 
   return `${hours} hr ${remainingMinutes} min`;
 }
+
+export function formatCredits(credits: number) {
+  return `${credits} credits`;
+}

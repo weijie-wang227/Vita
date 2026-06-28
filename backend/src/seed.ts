@@ -24,6 +24,7 @@ import {
   FriendshipModel,
   LikeModel,
   MapPinModel,
+  SettingsModel,
   UserModel,
 } from "./models/VitaData.js";
 import type { ActivitySeed, PremiumActivitySeed } from "./data.js";
@@ -46,7 +47,7 @@ const testUserSeed = {
   friendMockIds: [1, 2, 3, 7],
   chatMockIds: [1, 2, 3, 8],
   adminChatMockId: 1,
-  joinedActivityMockIds: [1, 3, 4, 8],
+  joinedActivitySeedIds: [1, 3, 4, 8],
 };
 const activityChatByTitle = new Map<string, number>([
   ["Tai Chi at Fort Canning", 1],
@@ -132,6 +133,7 @@ async function seed() {
       FeedPostModel.deleteMany(),
       CommentModel.deleteMany(),
       LikeModel.deleteMany(),
+      SettingsModel.deleteMany(),
     ]);
 
     const linda = await UserModel.create({
@@ -230,13 +232,11 @@ async function seed() {
         {
           userId: linda._id,
           friendId,
-          mutual: friend.mutual,
           joined: friend.joined,
         },
         {
           userId: friendId,
           friendId: linda._id,
-          mutual: friend.mutual,
           joined: friend.joined,
         },
       ]);
@@ -257,13 +257,11 @@ async function seed() {
         {
           userId: testUser._id,
           friendId,
-          mutual: friendSeed?.mutual ?? 0,
           joined: friendSeed?.joined ?? [],
         },
         {
           userId: friendId,
           friendId: testUser._id,
-          mutual: friendSeed?.mutual ?? 0,
           joined: friendSeed?.joined ?? [],
         },
       ]);
@@ -308,7 +306,7 @@ async function seed() {
       chatByMockId.set(chat.id, savedChat._id);
     }
 
-    const activityByMockId = new Map<number, Types.ObjectId>();
+    const activityBySeedId = new Map<number, Types.ObjectId>();
 
     for (const activity of allActivities) {
       const chatMockId = requireSeedValue(
@@ -330,7 +328,7 @@ async function seed() {
             `joining friend "${friend.name}" for activity "${activity.title}"`,
           ),
         );
-      const activityJoiningUsers = testUserSeed.joinedActivityMockIds.includes(
+      const activityJoiningUsers = testUserSeed.joinedActivitySeedIds.includes(
         activity.id,
       )
         ? [...joiningFriends, testUser._id]
@@ -344,7 +342,7 @@ async function seed() {
         location: activity.location,
         durationMinutes: activity.durationMinutes,
         spots: activity.spots,
-        price: activity.price,
+        credits: activity.credits,
         rating: activity.rating,
         categories: activity.categories,
         chat: chatId,
@@ -353,7 +351,7 @@ async function seed() {
         tags: isPremiumActivity(activity) ? activity.tags : [],
       });
 
-      activityByMockId.set(activity.id, savedActivity._id);
+      activityBySeedId.set(activity.id, savedActivity._id);
 
       const activityJoinRows = uniqueObjectIds(activityJoiningUsers).map(
         (userId) => ({
@@ -369,7 +367,7 @@ async function seed() {
 
     for (const pin of mapPins) {
       const activityId = requireSeedValue(
-        activityByMockId.get(pin.activityId),
+        activityBySeedId.get(pin.activityId),
         `activity ${pin.activityId} for map pin ${pin.id}`,
       );
 
@@ -410,7 +408,7 @@ async function seed() {
         `activity "${post.activity}" for feed post ${post.id}`,
       );
       const activityId = requireSeedValue(
-        activityByMockId.get(activity.id),
+        activityBySeedId.get(activity.id),
         `activity ${activity.id} for feed post ${post.id}`,
       );
 
@@ -421,7 +419,6 @@ async function seed() {
         time: post.time,
         caption: post.caption,
         image: post.image,
-        likes: likeCountByPostId.get(post.id) ?? 0,
         likesCount: likeCountByPostId.get(post.id) ?? 0,
         comments: commentCountByPostId.get(post.id) ?? 0,
       });

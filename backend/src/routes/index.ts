@@ -5,6 +5,7 @@ import authRoutes from "./auth.js";
 import feedRoutes from "./feed.js";
 import groupRoutes from "./groups.js";
 import profileRoutes from "./profile.js";
+import settingsRoutes from "./settings.js";
 import uploadRoutes from "./uploads.js";
 
 export const router = Router();
@@ -46,5 +47,6 @@ router.use("/auth", authRoutes);
 router.use("/activities", activityRoutes);
 router.use("/feed", feedRoutes);
 router.use("/groups", groupRoutes);
+router.use("/settings", settingsRoutes);
 router.use("/uploads", uploadRoutes);
 router.use("/", profileRoutes);

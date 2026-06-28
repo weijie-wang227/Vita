@@ -4,6 +4,7 @@ import { FriendAvatars } from "./FriendAvatars";
 import {
   categoriesForActivity,
   categoryIcon,
+  formatCredits,
   primaryActivityCategory,
   vitaCategoryColor,
 } from "../lib/activityPresentation";
@@ -70,7 +71,7 @@ export function PremiumCard({ activity }: { activity: PremiumActivity }) {
             {activity.title}
           </h3>
           <span className="text-xs font-bold text-accent flex-shrink-0">
-            {activity.price}
+            {formatCredits(activity.credits)}
           </span>
         </div>
         <div className="flex items-center gap-1 mb-1.5">
@@ -145,7 +146,7 @@ export function StandardRow({ activity }: { activity: Activity }) {
               {activity.title}
             </p>
             <span className="text-xs text-accent font-bold flex-shrink-0">
-              {activity.price}
+              {formatCredits(activity.credits)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">

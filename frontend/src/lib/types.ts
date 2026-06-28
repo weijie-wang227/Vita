@@ -1,16 +1,16 @@
 export type VitaCategory = "physical" | "social" | "cognitive" | "creative";
+export type ActivityId = number;
 
 export type Friend = {
   id: number;
   name: string;
   handle: string;
   avatar: string;
-  mutual: number;
   joined: string[];
 };
 
 type ActivityBase = {
-  id: number;
+  id: ActivityId;
   title: string;
   host: string;
   date: string;
@@ -18,7 +18,7 @@ type ActivityBase = {
   location: string;
   durationMinutes: number;
   spots: number;
-  price: string;
+  credits: number;
   rating: number;
   categories: VitaCategory[];
   joiningFriends: Friend[];
@@ -42,7 +42,7 @@ export type CreateActivityInput = {
   longitude: number;
   durationMinutes: number;
   spots: number;
-  price: string;
+  credits: number;
   categories: VitaCategory[];
   groupId?: number;
 };
@@ -61,7 +61,6 @@ export type FeedPost = {
   time: string;
   caption: string;
   image?: string;
-  likes: number;
   likesCount: number;
   likedByMe: boolean;
   comments: number;
@@ -119,7 +118,6 @@ export type CreateFeedCommentResponse = {
 
 export type FeedLikeResponse = {
   postId: number;
-  likes: number;
   likesCount: number;
   likedByMe: boolean;
 };
@@ -138,13 +136,13 @@ export type GroupChat = {
 
 export type ChatActivityInvite = {
   activity: {
-    id: number;
+    id: ActivityId;
     title: string;
     date: string;
     time: string;
     location: string;
     durationMinutes: number;
-    price: string;
+    credits: number;
     categories: VitaCategory[];
   };
   joiningFriends: Friend[];
@@ -183,7 +181,7 @@ export type JoinGroupResponse = {
 
 export type MapPin = {
   id: number;
-  activityId: number;
+  activityId: ActivityId;
   latitude: number;
   longitude: number;
   x: number;
@@ -204,6 +202,26 @@ export type Profile = {
   avatar: string;
   bio: string;
   stats: ProfileStat[];
+};
+
+export type UpdateProfileInput = {
+  name: string;
+  handle: string;
+  bio: string;
+  avatar?: string;
+};
+
+export type SettingsPreferences = {
+  appearance: "light" | "dark";
+  activityReminders: boolean;
+  friendDiscovery: boolean;
+  privateActivityHistory: boolean;
+};
+
+export type HandleAvailability = {
+  handle: string;
+  available: boolean;
+  message?: string;
 };
 
 export type AuthUser = Profile & {

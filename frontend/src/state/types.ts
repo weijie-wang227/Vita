@@ -11,9 +11,11 @@ import type {
   MapPin,
   PremiumActivity,
   Profile,
+  SettingsPreferences,
   SignInInput,
   SignUpInput,
   StandardActivity,
+  UpdateProfileInput,
 } from "../lib/types";
 
 export type AppTab = "activities" | "feed" | "chat" | "profile";
@@ -46,6 +48,7 @@ export type AppState = {
   joinedActivityIds: number[];
   likedPostIds: Record<number, boolean>;
   likedActivityIds: Record<number, boolean>;
+  settingsPreferences: SettingsPreferences;
   signIn: (input: SignInInput) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<void>;
   createActivity: (input: CreateActivityInput) => Promise<StandardActivity>;
@@ -56,6 +59,10 @@ export type AppState = {
     input: CreateFeedCommentInput,
   ) => Promise<FeedComment>;
   addFriend: (friendId: string) => Promise<Friend>;
+  updateProfile: (input: UpdateProfileInput) => Promise<Profile>;
+  updateSettingsPreferences: (
+    input: SettingsPreferences,
+  ) => Promise<SettingsPreferences>;
   clearFriendInvite: () => void;
   clearFriendInviteResult: () => void;
   joinActivity: (activityId: number) => Promise<GroupChat>;

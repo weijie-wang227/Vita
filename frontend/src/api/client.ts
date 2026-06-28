@@ -1,6 +1,26 @@
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 const authTokenStorageKey = "vita.authToken";
 
+type ApiRequestErrorDetails = {
+  path: string;
+  url: string;
+  method: string;
+  status: number;
+  statusText: string;
+  contentType: string | null;
+  responseBody: string;
+};
+
+export class ApiRequestError extends Error {
+  details: ApiRequestErrorDetails;
+
+  constructor(message: string, details: ApiRequestErrorDetails) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.details = details;
+  }
+}
+
 function canUseStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
 }
@@ -25,19 +45,22 @@ export function clearAuthToken() {
   }
 }
 
-async function readErrorMessage(response: Response) {
-  const fallback = `API request failed (${response.status} ${response.statusText})`;
-  const text = await response.text();
+function trimResponseBody(text: string) {
+  return text.replace(/\s+/g, " ").trim().slice(0, 500);
+}
 
-  if (!text) {
+async function readErrorMessage(response: Response, responseBody: string) {
+  const fallback = `API request failed (${response.status} ${response.statusText})`;
+
+  if (!responseBody) {
     return fallback;
   }
 
   try {
-    const data = JSON.parse(text) as { message?: string };
+    const data = JSON.parse(responseBody) as { message?: string };
     return data.message || fallback;
   } catch {
-    return text;
+    return trimResponseBody(responseBody) || fallback;
   }
 }
 
@@ -63,7 +86,18 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
+    const responseBody = await response.text();
+    const message = await readErrorMessage(response, responseBody);
+
+    throw new ApiRequestError(message, {
+      path,
+      url: url.toString(),
+      method: init?.method ?? "GET",
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get("content-type"),
+      responseBody: trimResponseBody(responseBody),
+    });
   }
 
   return response.json() as Promise<T>;

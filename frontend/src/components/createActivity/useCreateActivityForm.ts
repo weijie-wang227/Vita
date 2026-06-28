@@ -146,7 +146,7 @@ export function useCreateActivityForm({
 
     const durationMinutes = Number(form.durationMinutes);
     const spots = Number(form.spots);
-    const credits = Number(form.priceCredits);
+    const credits = Number(form.credits);
 
     if (!selectedPosition) {
       setError("Drop a pin on the map for this activity.");
@@ -182,7 +182,7 @@ export function useCreateActivityForm({
       longitude: selectedPosition[1],
       durationMinutes,
       spots,
-      price: `${credits} credits`,
+      credits,
       categories: form.categories,
       groupId: form.linkedGroupId ? Number(form.linkedGroupId) : undefined,
     };

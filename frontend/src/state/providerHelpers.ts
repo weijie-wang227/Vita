@@ -1,5 +1,6 @@
 import type {
   Activity,
+  ActivityId,
   GroupChat,
 } from "../lib/types";
 
@@ -18,7 +19,10 @@ export function activityIdsJoinedByProfile(
     .map((activity) => activity.id);
 }
 
-export function markRecentActivityId(activityIds: number[], activityId: number) {
+export function markRecentActivityId(
+  activityIds: ActivityId[],
+  activityId: ActivityId,
+) {
   return [activityId, ...activityIds.filter((id) => id !== activityId)];
 }
 

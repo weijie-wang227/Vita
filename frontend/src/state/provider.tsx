@@ -13,7 +13,10 @@ import {
   signIn as requestSignIn,
   signUp as requestSignUp,
   unlikeFeedPost as requestUnlikeFeedPost,
+  updateProfile as requestUpdateProfile,
+  updateSettingsPreferences as requestUpdateSettingsPreferences,
 } from "../api";
+import { getStoredThemeMode, persistThemeMode } from "../app/themeMode";
 import type {
   Activity,
   ChatMessage,
@@ -24,6 +27,7 @@ import type {
   MapPin,
   PremiumActivity,
   Profile,
+  SettingsPreferences,
   StandardActivity,
 } from "../lib/types";
 import { AppStateContext } from "./context";
@@ -47,6 +51,15 @@ const emptyProfile: Profile = {
   bio: "",
   stats: [],
 };
+
+function getDefaultSettingsPreferences(): SettingsPreferences {
+  return {
+    appearance: getStoredThemeMode(),
+    activityReminders: true,
+    friendDiscovery: true,
+    privateActivityHistory: false,
+  };
+}
 
 const tabPaths: Record<AppTab, string> = {
   activities: "/activities",
@@ -128,6 +141,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     Record<number, boolean>
   >({});
   const [joinedActivityIds, setJoinedActivityIds] = useState<number[]>([]);
+  const [settingsPreferences, setSettingsPreferences] =
+    useState<SettingsPreferences>(() => getDefaultSettingsPreferences());
 
   useRestoreSession({
     setAuthError,
@@ -148,6 +163,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPremiumActivities,
     setJoinedActivityIds,
     setProfile,
+    setSettingsPreferences,
     setStandardActivities,
   });
 
@@ -329,6 +345,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinedActivityIds,
       likedPostIds,
       likedActivityIds,
+      settingsPreferences,
       signIn: async (input) => {
         try {
           const { token, user } = await requestSignIn(input);
@@ -351,6 +368,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setSelectedActivityId(null);
           setSelectedGroupId(null);
           setJoinedActivityIds([]);
+          setSettingsPreferences(getDefaultSettingsPreferences());
         } catch (error) {
           console.error("Unable to sign in", error);
           const message = getErrorMessage(error, "Unable to sign in");
@@ -380,6 +398,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setSelectedActivityId(null);
           setSelectedGroupId(null);
           setJoinedActivityIds([]);
+          setSettingsPreferences(getDefaultSettingsPreferences());
         } catch (error) {
           console.error("Unable to sign up", error);
           const message = getErrorMessage(error, "Unable to sign up");
@@ -484,6 +503,117 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       },
       addFriend,
+      updateProfile: async (input) => {
+        const previousProfile = profile;
+        const currentUserId = authUser?.id;
+
+        try {
+          const updatedProfile = await requestUpdateProfile(input);
+
+          setProfile(updatedProfile);
+          setAuthUser((current) =>
+            current ? { ...current, ...updatedProfile } : current,
+          );
+          setFeedPosts((current) =>
+            current.map((post) =>
+              post.handle === previousProfile.handle
+                ? {
+                    ...post,
+                    user: updatedProfile.name,
+                    handle: updatedProfile.handle,
+                    avatar: updatedProfile.avatar,
+                  }
+                : post,
+            ),
+          );
+          setFeedComments((current) => {
+            const nextComments: Record<number, FeedComment[]> = {};
+
+            for (const [postId, comments] of Object.entries(current)) {
+              nextComments[Number(postId)] = comments.map((comment) =>
+                comment.handle === previousProfile.handle
+                  ? {
+                      ...comment,
+                      user: updatedProfile.name,
+                      handle: updatedProfile.handle,
+                      avatar: updatedProfile.avatar,
+                    }
+                  : comment,
+              );
+            }
+
+            return nextComments;
+          });
+          setGroupChats((current) =>
+            current.map((group) => ({
+              ...group,
+              memberList: group.memberList?.map((member) =>
+                member.id === currentUserId
+                  ? {
+                      ...member,
+                      name: updatedProfile.name,
+                      handle: updatedProfile.handle,
+                      avatar: updatedProfile.avatar,
+                    }
+                  : member,
+              ),
+            })),
+          );
+          setChatMessages((current) => {
+            const nextMessages: Record<number, ChatMessage[]> = {};
+
+            for (const [groupId, messages] of Object.entries(current)) {
+              nextMessages[Number(groupId)] = messages.map((message) =>
+                message.sender.id === currentUserId
+                  ? {
+                      ...message,
+                      sender: {
+                        ...message.sender,
+                        name: updatedProfile.name,
+                        handle: updatedProfile.handle,
+                        avatar: updatedProfile.avatar,
+                      },
+                    }
+                  : message,
+              );
+            }
+
+            return nextMessages;
+          });
+          setApiError(null);
+
+          return updatedProfile;
+        } catch (error) {
+          console.error("Unable to update profile", error);
+          const message = getErrorMessage(error, "Unable to update profile");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      updateSettingsPreferences: async (input) => {
+        const previousPreferences = settingsPreferences;
+
+        setSettingsPreferences(input);
+        persistThemeMode(input.appearance);
+
+        try {
+          const updatedPreferences = await requestUpdateSettingsPreferences(input);
+
+          setSettingsPreferences(updatedPreferences);
+          persistThemeMode(updatedPreferences.appearance);
+          setApiError(null);
+
+          return updatedPreferences;
+        } catch (error) {
+          console.error("Unable to update settings", error);
+          setSettingsPreferences(previousPreferences);
+          persistThemeMode(previousPreferences.appearance);
+
+          const message = getErrorMessage(error, "Unable to update settings");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
       clearFriendInvite,
       clearFriendInviteResult,
       joinActivity,
@@ -504,6 +634,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setGroupChats([]);
         setChatMessages({});
         setJoinedActivityIds([]);
+        setSettingsPreferences(getDefaultSettingsPreferences());
         setActiveTab("activities");
         setShowProfile(false);
         setShowSettings(false);
@@ -580,7 +711,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               item.id === postId
                 ? {
                     ...item,
-                    likes: response.likes,
                     likesCount: response.likesCount,
                     likedByMe: response.likedByMe,
                   }
@@ -632,6 +762,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       joinedActivityIds,
       likedPostIds,
       likedActivityIds,
+      settingsPreferences,
       navigate,
       applyGroupUpdate,
       addFriend,

@@ -134,15 +134,15 @@ export function ActivityDetailsFields({
 
       <label className="block">
         <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-          Price
+          Credits
         </span>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-input-background px-3">
           <input
             type="number"
             min={0}
             step={1}
-            value={form.priceCredits}
-            onChange={(event) => onFieldChange("priceCredits", event.target.value)}
+            value={form.credits}
+            onChange={(event) => onFieldChange("credits", event.target.value)}
             className="h-11 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
             required
           />
