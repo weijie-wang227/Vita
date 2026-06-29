@@ -15,7 +15,7 @@ type AuthMode = "signin" | "signup";
 function AuthLoadingScreen() {
   return (
     <div
-      className="min-h-screen bg-background flex items-center justify-center"
+      className="flex h-dvh min-h-dvh items-center justify-center overflow-hidden bg-background"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <div className="flex flex-col items-center gap-4 text-sm text-muted-foreground">
@@ -104,10 +104,10 @@ function AuthScreen() {
 
   return (
     <div
-      className="min-h-screen bg-background"
+      className="h-dvh min-h-dvh overflow-hidden bg-background"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      <div className="vida-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden px-5 py-6">
+      <div className="vida-phone-shell relative mx-auto h-full w-full overflow-hidden px-5 py-6">
         <div className="relative flex min-h-[calc(100vh-3rem)] flex-col justify-center">
           <div className="mb-7">
             <div className="vida-auth-brand">

@@ -68,13 +68,15 @@ export function AppShell() {
 
   return (
     <div
-      className="min-h-screen bg-background"
+      className="h-dvh min-h-dvh overflow-hidden bg-background"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      <div className="vida-phone-shell relative mx-auto min-h-screen w-full max-w-md overflow-hidden">
+      <div className="vida-phone-shell relative mx-auto h-full w-full overflow-hidden">
         <div
-          className={`absolute inset-0 overflow-hidden ${
-            hasFullScreenView ? "bottom-0" : "bottom-20"
+          className={`vida-app-content ${
+            hasFullScreenView
+              ? "vida-app-content--fullscreen"
+              : "vida-app-content--with-nav"
           }`}
         >
           <Suspense fallback={null}>

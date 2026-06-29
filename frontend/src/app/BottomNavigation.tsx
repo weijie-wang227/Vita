@@ -87,7 +87,7 @@ export function BottomNavigation({
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-40 h-20 flex items-start pt-2 px-2"
+      className="vida-bottom-navigation flex items-start px-2 pt-2"
       style={{
         background:
           "linear-gradient(to top, var(--background) 62%, rgba(23,22,37,0))",

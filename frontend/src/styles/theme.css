@@ -279,7 +279,25 @@
   }
 
   .vida-phone-shell {
+    --vida-bottom-nav-height: calc(5rem + env(safe-area-inset-bottom, 0px));
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
     background: var(--phone-shell-background);
+  }
+
+  .vida-app-content {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .vida-app-content--with-nav {
+    bottom: var(--vida-bottom-nav-height);
+  }
+
+  .vida-app-content--fullscreen {
+    bottom: 0;
   }
 
   .vida-top-logo {
@@ -388,6 +406,17 @@
     width: 5.35rem;
     filter: drop-shadow(0 12px 18px rgba(8, 8, 18, 0.38))
       drop-shadow(0 0 14px rgba(244, 185, 80, 0.16));
+  }
+
+  .vida-bottom-navigation {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    height: var(--vida-bottom-nav-height);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--border);
   }
 
   .vida-auth-brand {
