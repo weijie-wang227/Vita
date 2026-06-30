@@ -26,6 +26,18 @@ React/Vite mobile frontend for vida, an activity discovery and group chat app.
 - The frontend no longer ships fallback mock data for app state. If the API fails, the app logs the error in the browser console and surfaces the failure through the relevant UI flow.
 - Set `VITE_API_URL` when the backend is not running at `http://localhost:4000/api`.
 
+## Render Deployment
+
+This app uses React Router with `BrowserRouter`, so Render needs a rewrite rule for direct visits and refreshes on client-side routes such as `/groups`.
+
+In the Render Static Site dashboard, add this Redirect/Rewrite rule:
+
+| Source | Destination | Action |
+| --- | --- | --- |
+| `/*` | `/index.html` | `Rewrite` |
+
+Render serves real static assets before applying rewrite rules, so this does not replace files that exist in the built `dist` directory.
+
 ## Running
 
 ```bash

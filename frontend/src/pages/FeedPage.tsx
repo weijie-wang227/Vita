@@ -1,27 +1,13 @@
 import {
-  Bell,
-  Edit3,
-  Heart,
   ImagePlus,
   Loader2,
-  MessageCircle,
-  MoreHorizontal,
   Plus,
   Send,
-  Share2,
-  Trash2,
   Users,
   X,
 } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate } from "react-router";
 import { uploadImageToR2 } from "../api/uploads";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../app/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -29,7 +15,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../app/components/ui/sheet";
-import { ActivityCategoryIndicators } from "../components/ActivityCategoryIndicators";
+import { FeedNotifications } from "../components/FeedNotifications";
+import { FeedPostCard } from "../components/FeedPostCard";
+import { FriendAvatar } from "../components/FriendAvatars";
 import { FloatingActionButton } from "../components/FloatingActionButton";
 import {
   categoryIcon,
@@ -38,9 +26,9 @@ import {
   vidaCategoryColor,
   vidaCategoryLabel,
 } from "../lib/activityPresentation";
-import { formatRelativeTimeFromNow } from "../lib/time";
 import type { FeedPostGroupReference, vidaCategory } from "../lib/types";
 import { useAppState } from "../state";
+import { formatRelativeTimeFromNow } from "../lib/time";
 
 const maxImageBytes = 3 * 1024 * 1024;
 const defaultCategories: vidaCategory[] = ["social"];
@@ -69,16 +57,15 @@ export function FeedPage() {
     joinGroup,
     loadFeedComments,
     likedPostIds,
+    markNotificationAsRead,
     notifications,
     openGroup,
     profile,
     togglePostLike,
     updateFeedPost,
   } = useAppState();
-  const navigate = useNavigate();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [caption, setCaption] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [selectedCategories, setSelectedCategories] =
@@ -119,9 +106,6 @@ export function FeedPage() {
       ? null
       : (feedPosts.find((post) => post.id === editingPostId) ?? null);
   const durationMinutes = durationHours * 60 + durationMinuteRemainder;
-  const unreadNotificationCount = notifications.filter(
-    (notification) => !notification.read,
-  ).length;
 
   const resetComposer = () => {
     setCaption("");
@@ -423,29 +407,14 @@ export function FeedPage() {
     }
   };
 
-  const handleNotificationClick = (link: string | undefined) => {
-    if (!link) {
-      return;
-    }
-
-    setIsNotificationsOpen(false);
-    navigate(link);
-  };
-
   return (
     <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <h1 className="text-xl font-bold text-foreground">Feed</h1>
-        <button
-          onClick={() => setIsNotificationsOpen(true)}
-          className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center relative"
-          aria-label="Notifications"
-        >
-          <Bell size={15} className="text-muted-foreground" />
-          {unreadNotificationCount > 0 && (
-            <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
-          )}
-        </button>
+        <FeedNotifications
+          notifications={notifications}
+          onMarkAsRead={markNotificationAsRead}
+        />
       </div>
 
       {likeError && (
@@ -467,11 +436,7 @@ export function FeedPage() {
             className="rounded-2xl border border-border bg-card p-3 shadow-lg shadow-black/10"
           >
             <div className="flex gap-2.5">
-              <img
-                src={profile.avatar}
-                alt=""
-                className="h-9 w-9 rounded-full object-cover"
-              />
+              <FriendAvatar user={profile} className="h-9 w-9" />
               <textarea
                 value={caption}
                 onChange={(event) => setCaption(event.target.value)}
@@ -649,9 +614,6 @@ export function FeedPage() {
         {feedPosts.map((post) => {
           const liked = Boolean(likedPostIds[post.id] ?? post.likedByMe);
           const isLiking = Boolean(likingPostIds[post.id]);
-          const contextLabel = post.group?.name ?? post.activity;
-          const hasCategorySummary =
-            post.categories.length > 0 && post.durationMinutes !== undefined;
           const joinedReferencedGroup = post.group
             ? groupChats.some((group) => group.id === post.group?.id)
             : false;
@@ -660,170 +622,20 @@ export function FeedPage() {
           const isDeleting = deletingPostId === post.id;
 
           return (
-            <div key={post.id} className="mb-1">
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-secondary flex-shrink-0">
-                  <img
-                    src={post.avatar}
-                    alt={post.user}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground">
-                    {post.user}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatRelativeTimeFromNow(post.createdAt)}
-                    </span>
-                    {contextLabel && (
-                      <>
-                        <span className="text-muted-foreground opacity-40">
-                          /
-                        </span>
-                        <span className="text-[10px] text-accent truncate">
-                          {contextLabel}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  {hasCategorySummary && (
-                    <div className="mt-1">
-                      <ActivityCategoryIndicators
-                        categories={post.categories}
-                        durationMinutes={post.durationMinutes ?? 0}
-                        variant="pills"
-                      />
-                    </div>
-                  )}
-                </div>
-                {isOwnPost && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:bg-secondary"
-                        aria-label="Post menu"
-                      >
-                        {isDeleting ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <MoreHorizontal size={16} />
-                        )}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem
-                        disabled={isDeleting}
-                        onSelect={() => handleStartEditPost(post.id)}
-                      >
-                        <Edit3 size={14} />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={isDeleting}
-                        variant="destructive"
-                        onSelect={() => handleDeletePost(post.id)}
-                      >
-                        {isDeleting ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={14} />
-                        )}
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-
-              {post.image && (
-                <div className="aspect-[4/3] bg-secondary overflow-hidden">
-                  <img
-                    src={post.image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              <div className="px-4 pt-2.5 pb-1">
-                {post.group && (
-                  <button
-                    onClick={() => handleGroupButton(post.group)}
-                    className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 text-left active:bg-secondary/60"
-                  >
-                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                      <img
-                        src={post.group.avatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-foreground">
-                        {post.group.name}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <Users size={10} />
-                        <span>{post.group.members} members</span>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-bold text-accent-foreground">
-                      {joinedReferencedGroup ? "Open" : "Join"}
-                    </span>
-                  </button>
-                )}
-
-                <p className="text-[12px] text-foreground leading-snug">
-                  <span className="font-semibold">{post.user} </span>
-                  {post.caption}
-                </p>
-
-                <div className="mt-3 flex items-center gap-4">
-                  <button
-                    onClick={() => handleTogglePostLike(post.id)}
-                    disabled={isLiking}
-                    className="flex items-center gap-1.5"
-                    aria-label={liked ? "Unlike post" : "Like post"}
-                  >
-                    <Heart
-                      size={19}
-                      fill={liked ? "var(--brand-pink)" : "none"}
-                      stroke={
-                        liked ? "var(--brand-pink)" : "var(--muted-foreground)"
-                      }
-                      strokeWidth={1.5}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {post.likesCount}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleOpenComments(post.id)}
-                    className="flex items-center gap-1.5"
-                    aria-label={`Open comments for ${post.user}'s post`}
-                  >
-                    <MessageCircle
-                      size={19}
-                      stroke="var(--muted-foreground)"
-                      strokeWidth={1.5}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {post.comments}
-                    </span>
-                  </button>
-                  <button className="ml-auto" aria-label="Share post">
-                    <Share2
-                      size={17}
-                      stroke="var(--muted-foreground)"
-                      strokeWidth={1.5}
-                    />
-                  </button>
-                </div>
-              </div>
-              <div className="h-px bg-border mx-4 mt-3" />
-            </div>
+            <FeedPostCard
+              key={post.id}
+              post={post}
+              liked={liked}
+              isLiking={isLiking}
+              isOwnPost={isOwnPost}
+              isDeleting={isDeleting}
+              joinedReferencedGroup={joinedReferencedGroup}
+              onGroupButton={handleGroupButton}
+              onToggleLike={handleTogglePostLike}
+              onOpenComments={handleOpenComments}
+              onStartEdit={handleStartEditPost}
+              onDelete={handleDeletePost}
+            />
           );
         })}
         <div className="h-6" />
@@ -842,61 +654,6 @@ export function FeedPage() {
           <Plus size={22} color="var(--accent-foreground)" strokeWidth={2.5} />
         )}
       </FloatingActionButton>
-
-      <Sheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[78vh] gap-0 rounded-t-3xl border-border p-0 sm:mx-auto sm:max-w-md"
-        >
-          <SheetHeader className="border-b border-border px-4 pb-3 pr-12 pt-5 text-left">
-            <SheetTitle className="text-base">Notifications</SheetTitle>
-            <SheetDescription>
-              {unreadNotificationCount > 0
-                ? `${unreadNotificationCount} unread`
-                : "You're all caught up"}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="max-h-[58vh] overflow-y-auto px-4 py-3 scrollbar-minimal">
-            {notifications.length > 0 ? (
-              <div className="space-y-2">
-                {notifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    type="button"
-                    onClick={() => handleNotificationClick(notification.link)}
-                    disabled={!notification.link}
-                    className="flex w-full gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-left disabled:cursor-default"
-                  >
-                    <span
-                      className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${
-                        notification.read ? "bg-muted" : "bg-accent"
-                      }`}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-bold text-foreground">
-                        {notification.title}
-                      </span>
-                      <span className="mt-1 block text-[12px] leading-relaxed text-muted-foreground">
-                        {notification.content}
-                      </span>
-                      <span className="mt-2 block text-[10px] font-semibold text-muted-foreground">
-                        {formatRelativeTimeFromNow(notification.dateReceived)}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex min-h-[180px] items-center justify-center text-center">
-                <p className="max-w-[220px] text-sm leading-relaxed text-muted-foreground">
-                  No notifications yet.
-                </p>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <Sheet
         open={commentPostId !== null}
@@ -931,19 +688,14 @@ export function FeedPage() {
               <div className="space-y-3">
                 {selectedPostComments.map((comment) => (
                   <div key={comment.id} className="flex gap-2.5">
-                    <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                      {comment.avatar ? (
-                        <img
-                          src={comment.avatar}
-                          alt={comment.user}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-muted-foreground">
-                          {comment.user[0] ?? "?"}
-                        </span>
-                      )}
-                    </div>
+                    <FriendAvatar
+                      user={{
+                        name: comment.user,
+                        handle: comment.handle,
+                        avatar: comment.avatar,
+                      }}
+                      className="h-8 w-8"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <p className="truncate text-xs font-bold text-foreground">
@@ -979,11 +731,7 @@ export function FeedPage() {
               onSubmit={handleCreateComment}
               className="flex items-end gap-2 rounded-2xl bg-secondary px-3 py-2"
             >
-              <img
-                src={profile.avatar}
-                alt=""
-                className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
-              />
+              <FriendAvatar user={profile} className="h-8 w-8" />
               <textarea
                 value={commentDraft}
                 onChange={(event) => setCommentDraft(event.target.value)}

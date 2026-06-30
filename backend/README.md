@@ -50,6 +50,7 @@ npm run dev
 - `GET /api/auth/me`
 - `GET /api/profile`
 - `GET /api/friends`
+- `DELETE /api/friends/:friendId`
 - `GET /api/activities`
 - `GET /api/activities/premium`
 - `GET /api/activities/map-pins`
@@ -62,6 +63,9 @@ npm run dev
 - `DELETE /api/feed/:id/likes`
 - `GET /api/feed/:id/comments`
 - `POST /api/feed/:id/comments`
+- `GET /api/notifications`
+- `POST /api/notifications/send`
+- `POST /api/notifications/:notificationId/read`
 - `GET /api/groups`
 - `GET /api/groups/:id`
 - `POST /api/groups/:id/join`

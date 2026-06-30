@@ -67,6 +67,8 @@ export type AppState = {
     input: CreateFeedCommentInput,
   ) => Promise<FeedComment>;
   addFriend: (friendId: string) => Promise<Friend>;
+  removeFriend: (friendId: number | string) => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<Profile>;
   updateSettingsPreferences: (
     input: SettingsPreferences,
@@ -78,6 +80,7 @@ export type AppState = {
   leaveGroup: (groupId: number) => Promise<void>;
   deleteGroup: (groupId: number) => Promise<void>;
   removeGroupMember: (groupId: number, memberId: string) => Promise<GroupChat>;
+  appointGroupAdmin: (groupId: number, memberId: string) => Promise<GroupChat>;
   blacklistGroupMember: (groupId: number, memberId: string) => Promise<GroupChat>;
   loadGroupMessages: (groupId: number) => Promise<void>;
   sendGroupMessage: (groupId: number, body: string) => Promise<ChatMessage>;

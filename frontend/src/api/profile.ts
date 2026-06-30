@@ -39,3 +39,12 @@ export async function addFriend(friendId: string) {
     method: "POST",
   });
 }
+
+export async function removeFriend(friendId: number | string) {
+  await apiRequest<{ friendId: string }>(
+    `/friends/${encodeURIComponent(String(friendId))}`,
+    {
+      method: "DELETE",
+    },
+  );
+}

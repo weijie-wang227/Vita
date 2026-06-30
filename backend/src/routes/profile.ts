@@ -7,6 +7,7 @@ import {
 } from "../auth.js";
 import {
   FriendshipModel,
+  NotificationModel,
   SettingsModel,
   UserModel,
 } from "../models/VidaData.js";
@@ -71,6 +72,43 @@ async function isFriendDiscoverable(userId: unknown) {
   );
 
   return settings?.preferences?.friendDiscovery !== false;
+}
+
+async function findPrivateActivityHistoryUserIds(userIds: unknown[]) {
+  const normalizedUserIds = userIds.filter(Boolean);
+
+  if (normalizedUserIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const settings = await SettingsModel.find({
+    user: { $in: normalizedUserIds },
+    "preferences.privateActivityHistory": true,
+  }).select("user");
+
+  return new Set(
+    settings.map((setting: Record<string, any>) => String(setting.user)),
+  );
+}
+
+function getFriendUserId(friendship: Record<string, any>) {
+  const friend = friendship.friendId;
+
+  return String(friend?._id ?? friend ?? "");
+}
+
+async function findFriendByRouteId(friendId: string) {
+  if (Types.ObjectId.isValid(friendId)) {
+    return UserModel.findById(friendId);
+  }
+
+  const mockId = Number(friendId);
+
+  if (Number.isInteger(mockId)) {
+    return UserModel.findOne({ mockId });
+  }
+
+  return null;
 }
 
 router.get("/profile", async (req, res) => {
@@ -210,7 +248,19 @@ router.get("/friends", async (req, res) => {
   const savedFriends = await FriendshipModel.find({ userId: authUser._id })
     .populate("friendId")
     .sort({ createdAt: 1 });
-  res.json(savedFriends.map(serializeFriend));
+  const privateHistoryUserIds = await findPrivateActivityHistoryUserIds(
+    savedFriends.map((friendship: Record<string, any>) => friendship.friendId?._id),
+  );
+
+  res.json(
+    savedFriends.map((friendship: Record<string, any>) =>
+      serializeFriend(friendship, {
+        includeActivityHistory: !privateHistoryUserIds.has(
+          getFriendUserId(friendship),
+        ),
+      }),
+    ),
+  );
 });
 
 router.get("/friends/search", async (req, res) => {
@@ -290,6 +340,10 @@ router.post("/friends/add/:friendId", async (req, res) => {
     return;
   }
 
+  const existingFriendship = await FriendshipModel.exists({
+    userId: authUser._id,
+    friendId: friendUser._id,
+  });
   const friendship = await FriendshipModel.findOneAndUpdate(
     { userId: authUser._id, friendId: friendUser._id },
     {
@@ -314,7 +368,62 @@ router.post("/friends/add/:friendId", async (req, res) => {
     { upsert: true, setDefaultsOnInsert: true },
   );
 
-  res.json(serializeFriend(friendship));
+  if (!existingFriendship) {
+    await NotificationModel.create({
+      user: friendUser._id,
+      title: "New friend added",
+      content: `${authUser.name} added you as a friend.`,
+      link: "/profile",
+      read: false,
+    });
+  }
+
+  const privateHistoryUserIds = await findPrivateActivityHistoryUserIds([
+    friendUser._id,
+  ]);
+
+  res.json(
+    serializeFriend(friendship, {
+      includeActivityHistory: !privateHistoryUserIds.has(String(friendUser._id)),
+    }),
+  );
+});
+
+router.delete("/friends/:friendId", async (req, res) => {
+  const authUser = await findAuthenticatedUser(req.headers.authorization);
+
+  if (!authUser) {
+    res.status(401).json({ message: "Not signed in." });
+    return;
+  }
+
+  const friendId = String(req.params.friendId ?? "").trim();
+
+  if (!friendId) {
+    res.status(400).json({ message: "Friend ID is required." });
+    return;
+  }
+
+  const friendUser = await findFriendByRouteId(friendId);
+
+  if (!friendUser) {
+    res.status(404).json({ message: "Friend not found." });
+    return;
+  }
+
+  const result = await FriendshipModel.deleteMany({
+    $or: [
+      { userId: authUser._id, friendId: friendUser._id },
+      { userId: friendUser._id, friendId: authUser._id },
+    ],
+  });
+
+  if (result.deletedCount === 0) {
+    res.status(404).json({ message: "Friendship not found." });
+    return;
+  }
+
+  res.json({ friendId: String(friendUser.mockId ?? friendUser._id) });
 });
 
 export default router;

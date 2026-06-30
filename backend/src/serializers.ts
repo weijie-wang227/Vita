@@ -61,16 +61,24 @@ function getActivityStartsAt(activity: AnyDoc) {
   return fallback.toISOString();
 }
 
-export function serializeFriend(friendship: AnyDoc) {
+type SerializeFriendOptions = {
+  includeActivityHistory?: boolean;
+};
+
+export function serializeFriend(
+  friendship: AnyDoc,
+  options: SerializeFriendOptions = {},
+) {
   const item = asObject(friendship);
   const friend = asObject(item.friendId);
+  const includeActivityHistory = options.includeActivityHistory ?? true;
 
   return {
     id: friend.mockId,
     name: friend.name,
     handle: friend.handle,
     avatar: friend.avatarUrl,
-    joined: item.joined ?? [],
+    joined: includeActivityHistory ? (item.joined ?? []) : [],
   };
 }
 

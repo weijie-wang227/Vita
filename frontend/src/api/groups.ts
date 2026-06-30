@@ -49,6 +49,15 @@ export async function removeGroupMember(groupId: number, memberId: string) {
   );
 }
 
+export async function appointGroupAdmin(groupId: number, memberId: string) {
+  return apiRequest<GroupMutationResponse>(
+    `/groups/${groupId}/admins/${memberId}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export async function blacklistGroupMember(groupId: number, memberId: string) {
   return apiRequest<GroupMutationResponse>(
     `/groups/${groupId}/blacklist/${memberId}`,

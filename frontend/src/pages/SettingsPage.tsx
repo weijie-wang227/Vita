@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { vidaThemeMode } from "../app/themeMode";
+import { FriendAvatar } from "../components/FriendAvatars";
 import type { SettingsPreferences } from "../lib/types";
 import { useAppState } from "../state";
 
@@ -174,19 +175,14 @@ export function SettingsPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-minimal">
         <section className="rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full bg-secondary">
-              {profile.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <UserRound size={18} className="text-muted-foreground" />
-                </div>
-              )}
-            </div>
+            <FriendAvatar
+              user={{
+                name: profile.name || "vida profile",
+                handle: profile.handle || authUser?.email || "",
+                avatar: profile.avatar,
+              }}
+              className="h-12 w-12"
+            />
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-bold text-foreground">
                 {profile.name || "vida profile"}

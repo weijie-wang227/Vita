@@ -19,14 +19,27 @@ import {
   MessageCircle,
   QrCode,
   Settings,
+  Trash2,
   UserRound,
   UserPlus,
   Users,
   X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../app/components/ui/alert-dialog";
 import { checkHandleAvailability, searchFriendsByHandle } from "../api/profile";
 import { uploadImageToR2 } from "../api/uploads";
 import { BaseSearchBar } from "../components/BaseSearchBar";
+import { FriendAvatar } from "../components/FriendAvatars";
 import type { FriendSearchResult } from "../lib/types";
 import { useAppState } from "../state";
 
@@ -66,6 +79,7 @@ export function ProfilePage() {
     friendInviteFeedback,
     friendInviteFriend,
     profile,
+    removeFriend,
     signOut,
     showProfileFriends,
     openSettings,
@@ -88,6 +102,10 @@ export function ProfilePage() {
   const [addFriendFeedback, setAddFriendFeedback] = useState<string | null>(
     null,
   );
+  const [removeFriendFeedback, setRemoveFriendFeedback] = useState<string | null>(
+    null,
+  );
+  const [removingFriendId, setRemovingFriendId] = useState<number | null>(null);
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
   const [debouncedFriendSearchQuery, setDebouncedFriendSearchQuery] =
     useState("");
@@ -344,6 +362,22 @@ export function ProfilePage() {
     }
   };
 
+  const handleRemoveFriend = async (friendId: number, friendName: string) => {
+    setRemovingFriendId(friendId);
+    setRemoveFriendFeedback(null);
+
+    try {
+      await removeFriend(friendId);
+      setRemoveFriendFeedback(`${friendName} removed from your friends.`);
+    } catch (error) {
+      setRemoveFriendFeedback(
+        error instanceof Error ? error.message : "Unable to remove friend.",
+      );
+    } finally {
+      setRemovingFriendId(null);
+    }
+  };
+
   const handleEditProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -418,13 +452,10 @@ export function ProfilePage() {
       <div className="flex-1 overflow-y-auto scrollbar-minimal">
         <div className="flex flex-col items-center px-4 pb-5">
           <div className="relative mb-3">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-accent">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <FriendAvatar
+              user={profile}
+              className="h-20 w-20 border-2 border-accent"
+            />
           </div>
           <h2 className="text-lg font-bold text-foreground">{profile.name}</h2>
           <p className="text-xs text-accent font-medium mb-1">
@@ -515,13 +546,7 @@ export function ProfilePage() {
                               : ""
                           }`}
                         >
-                          <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                            <img
-                              src={friend.avatar}
-                              alt={friend.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
+                          <FriendAvatar user={friend} className="h-9 w-9" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[12px] font-semibold text-foreground">
                               {friend.name}
@@ -574,13 +599,7 @@ export function ProfilePage() {
                 ) : null}
               </div>
               <div className="flex items-center justify-center gap-2">
-                <div className="w-6 h-6 rounded-full overflow-hidden">
-                  <img
-                    src={profile.avatar}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <FriendAvatar user={profile} className="h-6 w-6" />
                 <span className="text-xs font-semibold text-foreground">
                   {profile.name}
                 </span>
@@ -623,6 +642,11 @@ export function ProfilePage() {
                   No friends match your search.
                 </p>
               )}
+              {removeFriendFeedback ? (
+                <p className="border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
+                  {removeFriendFeedback}
+                </p>
+              ) : null}
               {filteredFriends.map((friend, index) => (
                 <div
                   key={friend.id}
@@ -632,13 +656,7 @@ export function ProfilePage() {
                       : ""
                   }`}
                 >
-                  <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
-                    <img
-                      src={friend.avatar}
-                      alt={friend.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <FriendAvatar user={friend} className="h-9 w-9" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-semibold text-foreground">
                       {friend.name}
@@ -647,15 +665,61 @@ export function ProfilePage() {
                       {friend.joined[0] ?? "Just connected"}
                     </p>
                   </div>
-                  <button
-                    className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
-                    aria-label={`Message ${friend.name}`}
-                  >
-                    <MessageCircle
-                      size={12}
-                      className="text-muted-foreground"
-                    />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary"
+                      aria-label={`Message ${friend.name}`}
+                    >
+                      <MessageCircle
+                        size={12}
+                        className="text-muted-foreground"
+                      />
+                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary disabled:opacity-50"
+                          aria-label={`Remove ${friend.name}`}
+                          disabled={removingFriendId === friend.id}
+                        >
+                          {removingFriendId === friend.id ? (
+                            <Loader2
+                              size={12}
+                              className="animate-spin text-muted-foreground"
+                            />
+                          ) : (
+                            <Trash2
+                              size={12}
+                              className="text-muted-foreground"
+                            />
+                          )}
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Remove {friend.name}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes the friendship for both of you.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() =>
+                              handleRemoveFriend(friend.id, friend.name)
+                            }
+                          >
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               ))}
             </div>
@@ -676,13 +740,10 @@ export function ProfilePage() {
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/15">
               <CheckCircle2 size={26} className="text-accent" />
             </div>
-            <div className="mx-auto h-20 w-20 overflow-hidden rounded-full border-2 border-accent bg-secondary">
-              <img
-                src={friendInviteFriend.avatar}
-                alt={friendInviteFriend.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <FriendAvatar
+              user={friendInviteFriend}
+              className="mx-auto h-20 w-20 border-2 border-accent"
+            />
             <h2 className="mt-3 text-lg font-bold text-foreground">
               Friend added successfully
             </h2>
@@ -763,19 +824,15 @@ export function ProfilePage() {
             className="flex-1 overflow-y-auto px-4 pb-6 pt-4 scrollbar-minimal"
           >
             <div className="mb-5 flex flex-col items-center">
-              <div className="h-24 w-24 overflow-hidden rounded-full border-2 border-accent bg-secondary">
-                {editedAvatarSrc ? (
-                  <img
-                    src={editedAvatarSrc}
-                    alt={editName || "Profile photo"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <UserRound size={24} className="text-muted-foreground" />
-                  </div>
-                )}
-              </div>
+              <FriendAvatar
+                user={{
+                  name: editName || "Profile photo",
+                  handle: editHandle,
+                  avatar: editedAvatarSrc,
+                }}
+                className="h-24 w-24 border-2 border-accent"
+                disabled
+              />
               <input
                 ref={imageInputRef}
                 type="file"

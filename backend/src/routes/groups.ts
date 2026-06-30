@@ -452,6 +452,64 @@ router.delete("/:id/members/:memberId", async (req, res, next) => {
   }
 });
 
+router.post("/:id/admins/:memberId", async (req, res, next) => {
+  try {
+    const user = await findAuthenticatedUser(req.headers.authorization);
+
+    if (!user) {
+      res.status(401).json({ message: "Not signed in." });
+      return;
+    }
+
+    const groupId = Number(req.params.id);
+    const group = await ChatModel.findOne({ mockId: groupId }).populate("members");
+
+    if (!group) {
+      res.status(404).json({ message: "Group not found" });
+      return;
+    }
+
+    if (!(await isGroupAdmin(user._id, group._id))) {
+      res.status(403).json({ message: "Only group admins can appoint admins." });
+      return;
+    }
+
+    const targetMember = group.members.find(
+      (member: Record<string, any>) => String(member._id) === req.params.memberId,
+    );
+
+    if (!targetMember) {
+      res.status(404).json({ message: "Member not found in this group." });
+      return;
+    }
+
+    await AdminModel.updateOne(
+      { group: group._id, user: targetMember._id },
+      { $setOnInsert: { group: group._id, user: targetMember._id } },
+      { upsert: true },
+    );
+
+    const updatedGroup = await ChatModel.findById(group._id).populate("members");
+    const previews = updatedGroup
+      ? await getLatestChatPreviews([updatedGroup])
+      : new Map();
+    const adminUserIds = await findAdminUserIds(group._id);
+
+    res.json({
+      group: updatedGroup
+        ? serializeChat(
+            updatedGroup,
+            getChatPreview(previews, updatedGroup),
+            true,
+            adminUserIds,
+          )
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/:id/blacklist/:memberId", async (req, res, next) => {
   try {
     const user = await findAuthenticatedUser(req.headers.authorization);

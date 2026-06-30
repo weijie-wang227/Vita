@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
   addFriend as requestAddFriend,
+  appointGroupAdmin as requestAppointGroupAdmin,
   blacklistGroupMember as requestBlacklistGroupMember,
   clearAuthToken,
   createActivity as requestCreateActivity,
@@ -13,6 +14,8 @@ import {
   fetchFeedComments as requestFetchFeedComments,
   likeFeedPost as requestLikeFeedPost,
   leaveGroup as requestLeaveGroup,
+  markNotificationAsRead as requestMarkNotificationAsRead,
+  removeFriend as requestRemoveFriend,
   removeGroupMember as requestRemoveGroupMember,
   setAuthToken,
   signIn as requestSignIn,
@@ -270,6 +273,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       throw new Error(message);
     }
   }, [navigate]);
+
+  const removeFriend = useCallback(async (friendId: number | string) => {
+    try {
+      await requestRemoveFriend(friendId);
+
+      setFriends((current) =>
+        current.filter((friend) => String(friend.id) !== String(friendId)),
+      );
+      setApiError(null);
+    } catch (error) {
+      console.error("Unable to remove friend", error);
+      const message = getErrorMessage(error, "Unable to remove friend");
+      setApiError(message);
+      throw new Error(message);
+    }
+  }, []);
+
+  const markNotificationAsRead = useCallback(async (notificationId: string) => {
+    try {
+      const notification = await requestMarkNotificationAsRead(notificationId);
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? notification : item,
+        ),
+      );
+      setApiError(null);
+    } catch (error) {
+      console.error("Unable to mark notification as read", error);
+      const message = getErrorMessage(error, "Unable to mark notification as read");
+      setApiError(message);
+      throw new Error(message);
+    }
+  }, []);
 
   const clearFriendInvite = useCallback(() => {
     clearPendingFriendInviteId();
@@ -577,6 +614,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       },
       addFriend,
+      removeFriend,
+      markNotificationAsRead,
       updateProfile,
       updateSettingsPreferences: async (input) => {
         const previousPreferences = settingsPreferences;
@@ -647,6 +686,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Unable to remove member", error);
           const message = getErrorMessage(error, "Unable to remove member");
+          setApiError(message);
+          throw new Error(message);
+        }
+      },
+      appointGroupAdmin: async (groupId, memberId) => {
+        try {
+          const response = await requestAppointGroupAdmin(groupId, memberId);
+
+          applyGroupUpdate(response.group);
+          setApiError(null);
+
+          return response.group;
+        } catch (error) {
+          console.error("Unable to appoint admin", error);
+          const message = getErrorMessage(error, "Unable to appoint admin");
           setApiError(message);
           throw new Error(message);
         }
@@ -816,6 +870,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       navigate,
       applyGroupUpdate,
       addFriend,
+      removeFriend,
+      markNotificationAsRead,
       clearFriendInvite,
       clearFriendInviteResult,
       joinActivity,

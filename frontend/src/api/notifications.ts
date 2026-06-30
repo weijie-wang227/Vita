@@ -10,3 +10,12 @@ export async function fetchNotifications() {
       new Date(first.dateReceived).getTime(),
   );
 }
+
+export async function markNotificationAsRead(notificationId: string) {
+  return apiRequest<Notification>(
+    `/notifications/${encodeURIComponent(notificationId)}/read`,
+    {
+      method: "POST",
+    },
+  );
+}

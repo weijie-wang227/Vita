@@ -11,6 +11,7 @@ import {
   Send,
   ShieldCheck,
   Trash2,
+  UserPlus,
   UserMinus,
   Users,
 } from "lucide-react";
@@ -24,14 +25,32 @@ import {
   SheetTitle,
 } from "../app/components/ui/sheet";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../app/components/ui/alert-dialog";
+import {
   formatActivityDate,
   formatActivityTime,
 } from "../lib/activityPresentation";
+import { FriendAvatar, FriendAvatars } from "../components/FriendAvatars";
+import type { GroupMember } from "../lib/types";
 import { useAppState } from "../state";
+
+type ConfirmMemberAction = {
+  type: "remove" | "blacklist";
+  member: GroupMember;
+};
 
 export function GroupDetailPage() {
   const {
     authUser,
+    appointGroupAdmin,
     chatMessages,
     blacklistGroupMember,
     deleteGroup,
@@ -54,6 +73,8 @@ export function GroupDetailPage() {
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
+  const [confirmMemberAction, setConfirmMemberAction] =
+    useState<ConfirmMemberAction | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const group = groupChats.find((chat) => chat.id === groupId);
   const messages = Number.isFinite(groupId) ? chatMessages[groupId] ?? [] : [];
@@ -149,6 +170,29 @@ export function GroupDetailPage() {
     void runMemberAction(`blacklist:${memberId}`, () =>
       blacklistGroupMember(groupId, memberId).then(() => undefined),
     );
+  };
+
+  const handleAppointAdmin = (memberId: string) => {
+    void runMemberAction(`admin:${memberId}`, () =>
+      appointGroupAdmin(groupId, memberId).then(() => undefined),
+    );
+  };
+
+  const handleConfirmMemberAction = () => {
+    const action = confirmMemberAction;
+
+    setConfirmMemberAction(null);
+
+    if (!action) {
+      return;
+    }
+
+    if (action.type === "remove") {
+      handleRemoveMember(action.member.id);
+      return;
+    }
+
+    handleBlacklistMember(action.member.id);
   };
 
   if (!group) {
@@ -278,19 +322,7 @@ export function GroupDetailPage() {
                     key={member.id || member.handle}
                     className="flex items-center gap-3 border-b border-border py-3 last:border-0"
                   >
-                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-secondary">
-                      {member.avatar ? (
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
-                          {member.name[0] ?? "?"}
-                        </span>
-                      )}
-                    </div>
+                    <FriendAvatar user={member} className="h-10 w-10" />
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <p className="truncate text-sm font-semibold text-foreground">
@@ -317,7 +349,25 @@ export function GroupDetailPage() {
                         <>
                           <button
                             type="button"
-                            onClick={() => handleRemoveMember(member.id)}
+                            onClick={() => handleAppointAdmin(member.id)}
+                            disabled={Boolean(pendingMemberAction)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent disabled:opacity-60"
+                            aria-label={`Appoint ${member.name} as admin`}
+                          >
+                            {pendingMemberAction === `admin:${member.id}` ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <UserPlus size={13} />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setConfirmMemberAction({
+                                type: "remove",
+                                member,
+                              })
+                            }
                             disabled={Boolean(pendingMemberAction)}
                             className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-muted-foreground disabled:opacity-60"
                             aria-label={`Remove ${member.name}`}
@@ -330,7 +380,12 @@ export function GroupDetailPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleBlacklistMember(member.id)}
+                            onClick={() =>
+                              setConfirmMemberAction({
+                                type: "blacklist",
+                                member,
+                              })
+                            }
                             disabled={Boolean(pendingMemberAction)}
                             className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10 text-destructive-foreground disabled:opacity-60"
                             aria-label={`Blacklist ${member.name}`}
@@ -355,6 +410,38 @@ export function GroupDetailPage() {
           </div>
         </SheetContent>
       </Sheet>
+      <AlertDialog
+        open={Boolean(confirmMemberAction)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmMemberAction(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmMemberAction?.type === "blacklist"
+                ? "Ban this member?"
+                : "Kick this member?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmMemberAction?.type === "blacklist"
+                ? `${confirmMemberAction.member.name} will be removed from ${group.name} and blocked from joining again.`
+                : `${confirmMemberAction?.member.name ?? "This member"} will be removed from ${group.name}. They can rejoin later if they still have access.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmMemberAction}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {confirmMemberAction?.type === "blacklist" ? "Ban" : "Kick"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex-1 overflow-y-auto scrollbar-minimal px-4 py-4">
         {messages.length === 0 ? (
@@ -371,32 +458,11 @@ export function GroupDetailPage() {
                 message.sender.handle === profile.handle;
               const invite = message.activityInvite;
               const senderAvatar = (
-                <div
-                  className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full bg-secondary"
-                  title={message.sender.name}
-                >
-                  {message.sender.avatar ? (
-                    <img
-                      src={message.sender.avatar}
-                      alt={message.sender.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-muted-foreground">
-                      {message.sender.name[0] ?? "?"}
-                    </span>
-                  )}
-                </div>
+                <FriendAvatar user={message.sender} className="h-7 w-7" />
               );
 
               if (message.type === "activity_invite" && invite) {
                 const joinedFriends = invite.joiningFriends;
-                const visibleJoinedFriends = joinedFriends.slice(0, 4);
-                const extraJoinedFriends =
-                  joinedFriends.length - visibleJoinedFriends.length;
-                const joinedNames = visibleJoinedFriends
-                  .map((friend) => friend.name.split(" ")[0])
-                  .join(", ");
 
                 return (
                   <div
@@ -406,9 +472,16 @@ export function GroupDetailPage() {
                     }`}
                   >
                     {!isMine && senderAvatar}
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => navigate(`/activities/${invite.activity.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          navigate(`/activities/${invite.activity.id}`);
+                        }
+                      }}
                       className={`max-w-[86%] rounded-2xl border px-3 py-3 text-left shadow-sm transition-transform active:scale-[0.99] ${
                         isMine
                           ? "rounded-br-md border-accent/25 bg-accent/10"
@@ -467,37 +540,14 @@ export function GroupDetailPage() {
 
                       <div className="mt-3 border-t border-border pt-2">
                         {joinedFriends.length > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-1.5">
-                              {visibleJoinedFriends.map((friend) => (
-                                <img
-                                  key={friend.id}
-                                  src={friend.avatar}
-                                  alt={friend.name}
-                                  className="h-5 w-5 rounded-full border border-card object-cover"
-                                />
-                              ))}
-                              {extraJoinedFriends > 0 && (
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-card bg-secondary text-[8px] font-bold text-muted-foreground">
-                                  +{extraJoinedFriends}
-                                </span>
-                              )}
-                            </div>
-                            <span className="min-w-0 truncate text-[10px] text-muted-foreground">
-                              {joinedNames}
-                              {extraJoinedFriends > 0
-                                ? ` + ${extraJoinedFriends}`
-                                : ""}{" "}
-                              joined
-                            </span>
-                          </div>
+                          <FriendAvatars friends={joinedFriends} max={4} />
                         ) : (
                           <p className="text-[10px] text-muted-foreground">
                             No one has joined yet.
                           </p>
                         )}
                       </div>
-                    </button>
+                    </div>
                     {isMine && senderAvatar}
                   </div>
                 );
@@ -567,11 +617,7 @@ export function GroupDetailPage() {
           onSubmit={handleSendMessage}
           className="flex items-center gap-2 rounded-2xl bg-secondary px-3 py-2"
         >
-          <img
-            src={profile.avatar}
-            alt=""
-            className="h-7 w-7 rounded-full object-cover"
-          />
+          <FriendAvatar user={profile} className="h-7 w-7" />
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}

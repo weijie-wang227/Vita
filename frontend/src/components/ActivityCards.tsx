@@ -128,8 +128,16 @@ export function StandardRow({ activity }: { activity: Activity }) {
   const primaryColor = vidaCategoryColor[primaryCategory];
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => openActivity(activity.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openActivity(activity.id);
+        }
+      }}
       className="w-full py-3 border-b border-border last:border-0 text-left active:bg-secondary/40 transition-colors"
       aria-label={`Open ${activity.title}`}
     >
@@ -180,6 +188,6 @@ export function StandardRow({ activity }: { activity: Activity }) {
       <div style={{ paddingLeft: 52 }}>
         <FriendAvatars friends={activity.joiningFriends} max={4} />
       </div>
-    </button>
+    </div>
   );
 }

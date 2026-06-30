@@ -194,6 +194,7 @@ const activityJoinSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
     activityId: { type: Schema.Types.ObjectId, required: true, ref: "Activity" },
+    sentNotification: {type: Boolean, required: true, default: false}
   },
   { timestamps: true },
 );
